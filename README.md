@@ -1,7 +1,19 @@
-# Blog
+# Aydin's Workbench Blog
 
-Static blog landing page for Aydin's Workbench.
+Quarto blog for notes on statistical modelling, research software, and public
+data questions. The former Australian Data Review posts now live under
+`posts/`.
 
-Published with GitHub Pages at:
+## Local Preview
 
-https://blog.aydins-workbench.com
+```powershell
+quarto preview
+```
+
+## Render
+
+```powershell
+quarto render
+```
+
+The public site is published at <https://blog.aydins-workbench.com>.

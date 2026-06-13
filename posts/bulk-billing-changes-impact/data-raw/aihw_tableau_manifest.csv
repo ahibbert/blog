@@ -1,0 +1,6 @@
+label,sheet,rows,columns,path,source_workbook
+national,GP attendances 1,506,22,aihw_tableau_national.csv,HWE-97-MBS-GP-bulk-billing-data_20260526
+age,GP attendances 2,1518,21,aihw_tableau_age.csv,HWE-97-MBS-GP-bulk-billing-data_20260526
+seifa,GP attendances 3,2530,22,aihw_tableau_seifa.csv,HWE-97-MBS-GP-bulk-billing-data_20260526
+benefits,GP attendances 4,1518,24,aihw_tableau_benefits.csv,HWE-97-MBS-GP-bulk-billing-data_20260526
+latest_lga_map,Map,515,8,aihw_tableau_latest_lga_map.csv,HWE-97-MBS-GP-bulk-billing-data_20260526

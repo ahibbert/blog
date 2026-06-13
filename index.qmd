@@ -1,0 +1,113 @@
+---
+title: "Writing from the workbench"
+description: "Notes on statistical modelling, research software, public data questions, and project-adjacent thinking."
+page-layout: full
+listing:
+  id: post-listing
+  contents: posts/*/index.qmd
+  sort: "date desc"
+  type: default
+  categories: false
+  feed: true
+---
+
+```{=html}
+<section class="hero section-band" aria-labelledby="intro-title">
+  <div class="hero-copy">
+    <p class="eyebrow">Blog / notes / data questions</p>
+    <h1 id="intro-title">Writing from the workbench.</h1>
+    <p class="intro">
+      Notes that are too developed to stay in a scratch file and too alive to pretend
+      they are finished. Expect statistical modelling, public data analysis, research
+      software, workflow, and the occasional public attempt to think clearly.
+    </p>
+    <div class="hero-actions" aria-label="Primary links">
+      <a class="button primary" href="#posts">Browse posts</a>
+      <a class="button" href="https://aydins-workbench.com">Main site</a>
+      <a class="button" href="https://github.com/ahibbert">GitHub</a>
+    </div>
+  </div>
+
+  <div class="workbench-visual" aria-label="Blog workbench map">
+    <div class="notebook-sheet">
+      <span class="sheet-rule"></span>
+      <span class="sheet-rule"></span>
+      <span class="sheet-rule short"></span>
+      <span class="sheet-rule"></span>
+    </div>
+    <a class="pin pin-one" href="#threads">models</a>
+    <a class="pin pin-two" href="#threads">software</a>
+    <a class="pin pin-three" href="#posts">data</a>
+    <a class="pin pin-four" href="#posts">drafts</a>
+    <div class="map-caption">
+      <strong>Notebook map</strong>
+      <span>Working notes, small essays, and project-adjacent thinking.</span>
+    </div>
+  </div>
+</section>
+
+<section class="section updates-band" id="posts" aria-labelledby="posts-title">
+  <div class="section-heading">
+    <p class="eyebrow">Latest</p>
+    <h2 id="posts-title">Posts</h2>
+    <p>
+      The Australian Data Review notes now live here alongside the broader workbench
+      blog. Most data posts should be read as public drafts unless they explicitly say
+      otherwise.
+    </p>
+  </div>
+</section>
+```
+
+:::{#post-listing}
+:::
+
+```{=html}
+<section class="section" id="threads" aria-labelledby="threads-title">
+  <div class="section-heading">
+    <p class="eyebrow">Themes</p>
+    <h2 id="threads-title">Recurring threads</h2>
+    <p>
+      A rough index for the kinds of writing that will sit here as the project grows.
+    </p>
+  </div>
+
+  <div class="card-grid">
+    <article class="project-card">
+      <div class="card-top">
+        <span class="type-chip">Statistical modelling</span>
+        <span class="status-chip in-progress">drafting</span>
+      </div>
+      <h3>Distributional regression</h3>
+      <p>
+        Notes on GAMLSS, longitudinal outcomes, dependence structures, and ways to make
+        model behaviour easier to inspect.
+      </p>
+    </article>
+
+    <article class="project-card">
+      <div class="card-top">
+        <span class="type-chip">Research software</span>
+        <span class="status-chip in-progress">drafting</span>
+      </div>
+      <h3>Building tools in public</h3>
+      <p>
+        Reflections on small tools, reproducibility, APIs, packages, validation, and how
+        to make technical systems easier to trust.
+      </p>
+    </article>
+
+    <article class="project-card">
+      <div class="card-top">
+        <span class="type-chip">Data questions</span>
+        <span class="status-chip in-progress">drafting</span>
+      </div>
+      <h3>Applied data notes</h3>
+      <p>
+        Short writeups around Australian data, public datasets, limitations, and the
+        practical work of turning a question into an analysis.
+      </p>
+    </article>
+  </div>
+</section>
+```

@@ -1,0 +1,115 @@
+---
+title: "Questions, Data Sources and Half-Decent Rabbit Holes"
+description: "A casual starting point for the site: what this is for, useful Australian public datasets, and policy questions worth poking with data."
+date: "2026-05-26"
+categories: [data, australia, health, policy, methods]
+author: "Aydin"
+---
+
+This site is basically a place to ask public policy questions and see whether public data can give us better context, maybe even the occasional answer.
+
+The vibe is: pick a real policy question, find the best public dataset I can, do the analysis transparently, and be honest about what the data cannot tell us. A lot of this is for fun, interest, and keeping the data muscles from getting too creaky. So, as ever: grain of salt, ideally iodised.
+
+Public datasets are useful, but they are rarely complete. They usually show service use, claims, budgets, or reported outcomes. They do not magically reveal need, quality, unmet demand, implementation messiness, or the lived experience behind the row counts. Still, they are often enough to make a policy conversation a bit less foggy.
+
+## How I Want Posts To Work
+
+The rough template is:
+
+1. Ask one question.
+2. Find one credible dataset.
+3. Make a couple of clear charts.
+4. Explain the main pattern.
+5. Say what would change my mind.
+
+That last part matters. The goal is to be interesting without pretending to be the final word.
+
+## Datasets Worth Keeping Handy
+
+### Health, Care And Disability
+
+- [Australian Institute of Health and Welfare](https://www.aihw.gov.au/reports-data): national reports, data tables, health and welfare statistics, hospitals, Medicare and service-access indicators.
+- [AIHW data collections](https://www.aihw.gov.au/about-our-data/our-data-collections): a useful map of AIHW's major data holdings.
+- [Medicare statistics collection](https://www.health.gov.au/resources/collections/medicare-statistics-collection): MBS service counts, benefits, bulk billing, provider geography and item-level trends.
+- [PBS statistics](https://www.pbs.gov.au/info/browse/statistics): prescriptions, expenditure, medicine groups and affordability signals.
+- [ABS National Health Survey](https://www.abs.gov.au/statistics/health/health-conditions-and-risks/national-health-survey/2022): chronic conditions, risk factors, disability and self-assessed health.
+- [ABS Patient Experiences](https://www.abs.gov.au/statistics/health/health-services/patient-experiences): access, affordability, delayed care, GP, specialist, dental and prescription barriers.
+- [NDIS datasets](https://dataresearch.ndis.gov.au/datasets): participant numbers, plan budgets, utilisation, disability group, payments, providers and regional summaries.
+- [GEN Aged Care Data](https://www.health.gov.au/contacts/gen-aged-care-data): aged care services, places, providers, use and links into hospital pressure.
+- [Australian Immunisation Register statistics](https://www.servicesaustralia.gov.au/australian-immunisation-register-statistics): vaccine coverage and trend summaries.
+
+### Population, Places And Context
+
+- [ABS Data API](https://www.abs.gov.au/about/data-services/application-programming-interfaces-apis/data-api-user-guide): programmatic access to Census, labour, demographic and regional data.
+- [ABS regional data](https://www.abs.gov.au/statistics/people/population/regional-population): regional population, age structure and place-based context.
+- [SEIFA](https://www.abs.gov.au/statistics/people/people-and-communities/socio-economic-indexes-areas-seifa-australia/2021): area-level socioeconomic context.
+- [Report on Government Services](https://www.pc.gov.au/ongoing/report-on-government-services): comparable data across health, housing, justice, education and community services.
+- [Productivity Commission research](https://www.pc.gov.au/research): reform work, policy reviews and background evidence.
+- [Australian Government data portal](https://data.gov.au/): broad open data catalogue. Sometimes treasure, sometimes cupboard of mystery jars.
+
+### Housing And Cost Of Living
+
+- [ABS Total Value of Dwellings](https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/total-value-dwellings/latest-release): mean dwelling prices, dwelling stock values and state comparisons.
+- [ABS Lending Indicators](https://www.abs.gov.au/statistics/economy/finance/lending-indicators/latest-release): owner-occupier, investor and first-home buyer loan commitments.
+- [ABS Building Approvals](https://www.abs.gov.au/statistics/industry/building-and-construction/building-approvals-australia/latest-release): dwelling approvals and construction pipeline signals.
+- [Housing Australia](https://www.housingaustralia.gov.au/): housing programs, guarantees, shared equity and related scheme information.
+
+## Running Policy Question List
+
+### Health Access
+
+- Did the expanded bulk billing incentives from 1 November 2025 change GP bulk billing rates, appointment volumes, or just the billing mix?
+- Did the new Bulk Billing Practice Incentive Program show up differently in metropolitan, regional and remote areas?
+- Are areas with low GP bulk billing also showing more emergency department pressure?
+- Are MBS telehealth patterns settling into a stable access role, or fading back toward pre-pandemic geography?
+- Do areas with lower specialist service use have higher potentially preventable hospitalisations?
+- After PBS co-payment changes, are chronic-disease medicine claims changing more for concession-heavy areas?
+
+### NDIS, Disability And Outcomes
+
+- Is NDIS participation growing faster than the population, and where is that growth most concentrated?
+- Are utilisation gaps more about provider supply, participant mix, thin markets, administrative friction, or plan timing?
+- Which disability groups are driving payment growth, and are those changes broad-based or concentrated in particular supports?
+- As new NDIS framework planning begins from mid-2026, do plan budgets become more consistent for similar public-data groups?
+- Can participant outcome indicators be treated as investment signals, not just nice-to-have survey outcomes?
+- Are regions with stronger service access also showing better NDIS outcomes over time?
+
+### Aged Care
+
+- After the new Aged Care Act and Support at Home started on 1 November 2025, do hospital discharge and aged-care access indicators move differently by region?
+- Are home-care service volumes changing in ways that suggest substitution away from residential care or hospital stays?
+- Which regions have the biggest mismatch between ageing population growth and aged-care service availability?
+
+### Housing And Cost Of Living
+
+- After the 5% Deposit Scheme expansion from 1 October 2025, did first-home buyer loan commitments rise in the places where prices were already moving fastest?
+- Are first-home buyer supports being offset by higher mean dwelling prices, or are they mainly changing who can enter the market?
+- Are building approvals rising in the places with the fastest dwelling-price growth, or are supply signals lagging demand signals?
+- Are investor lending changes leading or following price changes across states?
+- Do rents, dwelling prices, income and population growth tell the same story by region, or are they pulling in different directions?
+
+### Climate, Housing And Health
+
+- Which urban areas combine heat exposure, poor housing quality, low income and higher chronic disease risk?
+- Do energy-bill relief or efficiency programs show up in hardship, health or consumption indicators?
+- Are climate-related health risks visible in emergency presentations, ambulance callouts or mortality data by region?
+
+## Modelling Notes
+
+- Treat MBS and PBS as claims and service-use datasets, not direct measures of health need.
+- Treat budgets, payments and outcomes as different things. They overlap, but they do not answer the same question.
+- For regional modelling, add ABS context: age structure, income, labour force status, housing, remoteness, disability prevalence, language and area disadvantage.
+- Use time-aware validation when possible: train on earlier periods, test on later ones, and keep policy-change dates explicit.
+- Do not turn prediction into allocation advice. For public writing, models are better framed as descriptive, diagnostic or forecasting tools.
+
+## Post Selection Checklist
+
+Before starting an analysis:
+
+- Is the question specific enough for one post?
+- Is the dataset public and stable enough to rerender?
+- Are the definitions readable for someone who is not already living inside the spreadsheet?
+- Can the analysis be reproduced from code?
+- Is there a caveat section that actually says something useful?
+
+That is the whole operating system, really. Ask the question, check the data, stay curious, do not overclaim.

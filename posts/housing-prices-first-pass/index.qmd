@@ -1,0 +1,206 @@
+---
+title: "A First Pass At Australian Dwelling Prices"
+description: "A small reproducible look at ABS dwelling values, state mean prices and the housing policy questions they raise."
+date: "2026-06-11"
+categories: [housing, cost-of-living, australia, policy, abs]
+author: "Aydin"
+---
+
+Housing debates have a way of turning into vibes very quickly. Prices feel high, supply feels tight, first-home buyer policy gets loud, and then everyone starts arguing from their favourite chart.
+
+So this is a small grounding exercise: use the latest ABS dwelling-value data, look at the national dwelling stock and mean prices by state, then write down the policy questions that seem worth chasing next.
+
+```{r}
+#| label: setup
+#| include: false
+
+library(readxl)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(stringr)
+library(lubridate)
+library(forcats)
+library(scales)
+library(knitr)
+
+theme_set(theme_minimal(base_size = 12))
+
+raw_dir <- file.path("data-raw", "housing")
+dir.create(raw_dir, recursive = TRUE, showWarnings = FALSE)
+
+source_urls <- list(
+  dwellings_latest = "https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/total-value-dwellings/latest-release",
+  dwellings_workbook = "https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/total-value-dwellings/mar-quarter-2026/643201.xlsx",
+  lending_latest = "https://www.abs.gov.au/statistics/economy/finance/lending-indicators/latest-release",
+  approvals_latest = "https://www.abs.gov.au/statistics/industry/building-and-construction/building-approvals-australia/latest-release",
+  home_ownership_support = "https://treasury.gov.au/policy-topics/housing/home-ownership-support"
+)
+```
+
+## Data
+
+The main source is ABS [Total Value of Dwellings](https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/total-value-dwellings/latest-release), March quarter 2026. The release estimates the total value, number and mean price of Australia's residential dwellings. I also keep [Lending Indicators](https://www.abs.gov.au/statistics/economy/finance/lending-indicators/latest-release), [Building Approvals](https://www.abs.gov.au/statistics/industry/building-and-construction/building-approvals-australia/latest-release), and Treasury's [home ownership support](https://treasury.gov.au/policy-topics/housing/home-ownership-support) page in view because prices alone do not tell us whether buyers are being helped, stretched, or both.
+
+```{r}
+#| label: load-data
+
+download_if_missing <- function(url, path) {
+  if (!file.exists(path)) {
+    download.file(url, path, mode = "wb", quiet = TRUE)
+  }
+  path
+}
+
+as_number <- function(x) {
+  parse_number(as.character(x), na = c("", "NA", "n/a", "-"))
+}
+
+quarter_date_from_excel <- function(x) {
+  as.Date(as.numeric(x), origin = "1899-12-30")
+}
+
+state_from_item <- function(item) {
+  str_split_fixed(item, ";", 3)[, 2] |>
+    str_squish()
+}
+
+measure_from_item <- function(item) {
+  case_when(
+    str_detect(item, "Value of dwelling stock; Owned by All Sectors") ~ "Total dwelling stock value",
+    str_detect(item, "Mean price of residential dwellings") ~ "Mean dwelling price",
+    str_detect(item, "Number of residential dwellings") ~ "Number of dwellings",
+    TRUE ~ NA_character_
+  )
+}
+
+workbook_path <- download_if_missing(
+  source_urls$dwellings_workbook,
+  file.path(raw_dir, "abs-total-value-dwellings-mar-quarter-2026.xlsx")
+)
+
+raw <- read_excel(workbook_path, sheet = "Data1", col_names = FALSE)
+
+series_meta <- tibble(
+  column = seq_along(raw),
+  item = as.character(unlist(raw[1, ])),
+  unit = as.character(unlist(raw[2, ])),
+  measure = measure_from_item(item),
+  state = state_from_item(item)
+) |>
+  filter(!is.na(measure), !is.na(state), state != "")
+
+dwelling_series <- raw |>
+  slice(-(1:10)) |>
+  transmute(row_id = row_number(), quarter_date = quarter_date_from_excel(...1)) |>
+  bind_cols(raw |> slice(-(1:10)) |> select(all_of(series_meta$column))) |>
+  pivot_longer(-c(row_id, quarter_date), names_to = "column_name", values_to = "value") |>
+  mutate(
+    column = as.integer(str_remove(column_name, "\\.\\.\\.")),
+    value = as_number(value)
+  ) |>
+  left_join(series_meta, by = "column") |>
+  filter(!is.na(value), !is.na(quarter_date), !is.na(measure)) |>
+  mutate(
+    value = case_when(
+      measure == "Total dwelling stock value" ~ value / 1000,
+      measure == "Mean dwelling price" ~ value * 1000,
+      measure == "Number of dwellings" ~ value * 1000,
+      TRUE ~ value
+    )
+  )
+
+latest_quarter <- max(dwelling_series$quarter_date, na.rm = TRUE)
+
+latest_state_prices <- dwelling_series |>
+  filter(measure == "Mean dwelling price", quarter_date %in% sort(unique(quarter_date), decreasing = TRUE)[1:2], state != "Australia") |>
+  select(quarter_date, state, mean_price = value) |>
+  pivot_wider(names_from = quarter_date, values_from = mean_price) |>
+  rename(previous_price = 2, latest_price = 3) |>
+  mutate(
+    quarterly_change = latest_price / previous_price - 1,
+    dollar_change = latest_price - previous_price
+  )
+```
+
+## What Has Happened Nationally?
+
+```{r}
+#| label: national-stock-value
+#| fig-cap: "ABS total value of Australian residential dwelling stock."
+
+dwelling_series |>
+  filter(measure == "Total dwelling stock value", state == "Australia", quarter_date >= as.Date("2021-03-31")) |>
+  ggplot(aes(quarter_date, value)) +
+  geom_line(linewidth = 0.9, colour = "#126782") +
+  geom_point(size = 2, colour = "#126782") +
+  scale_y_continuous(labels = dollar_format(suffix = "t", scale = 1 / 1000)) +
+  labs(x = NULL, y = "Total dwelling stock value")
+```
+
+```{r}
+#| label: national-mean-price
+#| fig-cap: "ABS mean dwelling price for Australia."
+
+dwelling_series |>
+  filter(measure == "Mean dwelling price", state == "Australia", quarter_date >= as.Date("2021-03-31")) |>
+  ggplot(aes(quarter_date, value)) +
+  geom_line(linewidth = 0.9, colour = "#7a4b9d") +
+  geom_point(size = 2, colour = "#7a4b9d") +
+  scale_y_continuous(labels = dollar) +
+  labs(x = NULL, y = "Mean dwelling price")
+```
+
+The March quarter 2026 release puts the national mean dwelling price at over $1.1 million. That is not a typical transaction price and it is not an affordability measure, but it is a useful whole-market signal: the stock keeps getting more expensive, even before we ask who can actually buy into it.
+
+## Which States Moved Most Recently?
+
+```{r}
+#| label: latest-state-prices
+#| fig-cap: "Latest ABS mean dwelling prices by state and territory."
+
+latest_state_prices |>
+  ggplot(aes(fct_reorder(state, latest_price), latest_price, fill = quarterly_change)) +
+  geom_col() +
+  coord_flip() +
+  scale_y_continuous(labels = dollar) +
+  scale_fill_gradient2(labels = percent, low = "#8c2d04", mid = "grey80", high = "#006d2c", midpoint = 0) +
+  labs(x = NULL, y = "Mean dwelling price", fill = "Quarterly change")
+```
+
+```{r}
+#| label: latest-state-table
+
+latest_state_prices |>
+  arrange(desc(quarterly_change)) |>
+  transmute(
+    state,
+    latest_mean_price = dollar(latest_price, accuracy = 100),
+    quarterly_change = percent(quarterly_change, accuracy = 0.1),
+    dollar_change = dollar(dollar_change, accuracy = 100)
+  ) |>
+  kable()
+```
+
+## Policy Questions This Sets Up
+
+Treasury says the 5% Deposit Scheme was expanded from 1 October 2025, with uncapped places, removed income caps and higher property price caps. That creates a nice empirical question, but not a simple one.
+
+The questions I would ask next:
+
+- Did first-home buyer loan commitments rise after the deposit-scheme expansion, and was that concentrated in states where prices were already rising fastest?
+- Did the policy mostly pull forward demand, or did it change the composition of buyers entering the market?
+- Are building approvals moving in the same places as dwelling prices, or is supply still lagging the demand signal?
+- Are investor loans and first-home buyer loans moving together or pushing against each other?
+- If mean prices rise after access support expands, how much of the buyer benefit is eaten by price pressure?
+
+Those need lending and building-approval data joined to this price series. This post is just the first brick.
+
+## Caveats
+
+- Mean dwelling price is a stock estimate, not a median sale price or a first-home buyer price.
+- State averages hide massive variation inside cities, regions and property types.
+- The latest ABS dwelling estimates are preliminary and can be revised.
+- Prices do not measure affordability on their own. We need income, rents, interest rates, deposit constraints, lending standards and supply.
+- Policy timing matters. A demand-side policy can show up in lending before it shows up in prices, and supply responses can be much slower.

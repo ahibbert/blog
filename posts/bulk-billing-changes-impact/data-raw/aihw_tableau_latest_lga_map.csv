@@ -1,0 +1,516 @@
+State1-alias,Reset_state_Australia-alias,Lga Code21-alias,SUM(Pivot Field Values (copy))-alias,ATTR(map_suppress_text)-alias,ATTR(Lga Name)-alias,ATTR(main_RA)-alias,ATTR(main_SEIFA)-alias
+WA,Aus,59370,0.7945345059,%null%,York,1 (Inner regional),3
+WA,Aus,59360,0.9132321041,%null%,Yilgarn,3 (Remote),3
+WA,Aus,59340,0.8739342403,%null%,Wyndham-East Kimberley,4 (Very remote),1 (most disadvantaged)
+WA,Aus,59330,0.8869565217,%null%,Wyalkatchem,2 (Outer regional),1 (most disadvantaged)
+WA,Aus,59320,0.9724446867,%null%,Woodanilling,2 (Outer regional),4
+WA,Aus,59310,0.9265208584,%null%,Wongan-Ballidu,2 (Outer regional),2
+WA,Aus,59250,0.9515151515,%null%,Wiluna,4 (Very remote),1 (most disadvantaged)
+WA,Aus,59170,0.6867709277,%null%,Williams,2 (Outer regional),5 (least disadvantage)
+WA,Aus,59100,0.7395459489,%null%,Wickepin,2 (Outer regional),4
+WA,Aus,59030,0.7834167413,%null%,Westonia,3 (Remote),5 (least disadvantage)
+WA,Aus,58890,0.7093724495,%null%,West Arthur,2 (Outer regional),5 (least disadvantage)
+WA,Aus,58820,0.9236890565,%null%,Waroona,1 (Inner regional),2
+WA,Aus,58760,0.7302476082,%null%,Wanneroo,0 (Major cities),4
+WA,Aus,58680,0.8999579429,%null%,Wandering,2 (Outer regional),4
+WA,Aus,58610,0.931372549,%null%,Wagin,2 (Outer regional),2
+WA,Aus,58570,0.5867422094,%null%,Vincent,0 (Major cities),5 (least disadvantage)
+WA,Aus,58540,0.6985429089,%null%,Victoria Plains,2 (Outer regional),5 (least disadvantage)
+WA,Aus,58510,0.6857980652,%null%,Victoria Park,0 (Major cities),5 (least disadvantage)
+WA,Aus,58400,0.8571428571,%null%,Trayning,3 (Remote),1 (most disadvantaged)
+WA,Aus,58330,0.8550577712,%null%,Toodyay,1 (Inner regional),3
+WA,Aus,58260,0.9683098592,%null%,Three Springs,3 (Remote),2
+WA,Aus,58190,0.8917525773,%null%,Tammin,2 (Outer regional),2
+WA,Aus,58050,0.76860476,%null%,Swan,0 (Major cities),4
+WA,Aus,57980,0.5188142489,%null%,Subiaco,0 (Major cities),5 (least disadvantage)
+WA,Aus,57910,0.6731318643,%null%,Stirling,0 (Major cities),5 (least disadvantage)
+WA,Aus,57840,0.6699998998,%null%,South Perth,0 (Major cities),5 (least disadvantage)
+WA,Aus,57770,0.7788048135,%null%,Shark Bay,4 (Very remote),3
+WA,Aus,57490,0.8153746603,%null%,Rockingham,0 (Major cities),3
+WA,Aus,57420,0.8592089654,%null%,Ravensthorpe,4 (Very remote),4
+WA,Aus,57350,0.9516908213,%null%,Quairading,2 (Outer regional),2
+WA,Aus,57280,0.6614673042,%null%,Port Hedland,3 (Remote),4
+WA,Aus,57210,0.8067582417,%null%,Plantagenet,2 (Outer regional),2
+WA,Aus,57140,0.9023397762,%null%,Pingelly,2 (Outer regional),1 (most disadvantaged)
+WA,Aus,57080,0.6228643066,%null%,Perth,0 (Major cities),5 (least disadvantage)
+WA,Aus,57000,0.8740732711,%null%,Perenjori,3 (Remote),5 (least disadvantage)
+WA,Aus,56930,0.4766164068,%null%,Peppermint Grove,0 (Major cities),5 (least disadvantage)
+WA,Aus,56860,0.875,%null%,Nungarin,3 (Remote),3
+WA,Aus,56790,0.8472105658,%null%,Northampton,3 (Remote),2
+WA,Aus,56730,0.7974578541,%null%,Northam,1 (Inner regional),2
+WA,Aus,56580,0.5463011683,%null%,Nedlands,0 (Major cities),5 (least disadvantage)
+WA,Aus,56460,0.8060025384,%null%,Narrogin,2 (Outer regional),2
+WA,Aus,56370,0.8571073268,%null%,Narembeen,3 (Remote),5 (least disadvantage)
+WA,Aus,56300,0.9077831979,%null%,Nannup,2 (Outer regional),3
+WA,Aus,56230,0.7870681863,%null%,Murray,0 (Major cities),2
+WA,Aus,56090,0.7263581771,%null%,Mundaring,0 (Major cities),5 (least disadvantage)
+WA,Aus,55950,0.7264957265,%null%,Mukinbudin,3 (Remote),4
+WA,Aus,55880,0.6853132314,%null%,Mount Marshall,3 (Remote),3
+WA,Aus,55810,0.8585858586,%null%,Mount Magnet,4 (Very remote),1 (most disadvantaged)
+WA,Aus,55740,0.5157490931,%null%,Mosman Park,0 (Major cities),5 (least disadvantage)
+WA,Aus,55670,0.9098741969,%null%,Morawa,3 (Remote),2
+WA,Aus,55600,0.647501761,%null%,Moora,2 (Outer regional),2
+WA,Aus,55530,0.708994709,%null%,Mingenew,2 (Outer regional),4
+WA,Aus,55460,0.9156556659,%null%,Merredin,2 (Outer regional),3
+WA,Aus,55320,0.6566221042,%null%,Melville,0 (Major cities),5 (least disadvantage)
+WA,Aus,55250,0.9625668449,%null%,Meekatharra,4 (Very remote),1 (most disadvantaged)
+WA,Aus,55180,0.829843053,%null%,Manjimup,2 (Outer regional),2
+WA,Aus,55110,0.774727327,%null%,Mandurah,0 (Major cities),2
+WA,Aus,55040,0.9283387622,%null%,Leonora,4 (Very remote),2
+WA,Aus,54970,0.9772727649,%null%,Laverton,4 (Very remote),1 (most disadvantaged)
+WA,Aus,54900,0.7849108002,%null%,Lake Grace,3 (Remote),5 (least disadvantage)
+WA,Aus,54830,0.8576945404,%null%,Kwinana,0 (Major cities),3
+WA,Aus,54760,0.8017987624,%null%,Kulin,3 (Remote),5 (least disadvantage)
+WA,Aus,54690,0.9113300493,%null%,Koorda,3 (Remote),3
+WA,Aus,54620,0.8431651671,%null%,Kondinin,3 (Remote),3
+WA,Aus,54550,0.8152901485,%null%,Kojonup,2 (Outer regional),4
+WA,Aus,54480,0.8321167883,%null%,Kent,3 (Remote),5 (least disadvantage)
+WA,Aus,54410,0.9180035651,%null%,Kellerberrin,2 (Outer regional),1 (most disadvantaged)
+WA,Aus,54340,0.9341438703,%null%,Katanning,2 (Outer regional),1 (most disadvantaged)
+WA,Aus,54310,0.7178584788,%null%,Karratha,3 (Remote),5 (least disadvantage)
+WA,Aus,54280,0.8726388234,%null%,Kalgoorlie-Boulder,2 (Outer regional),4
+WA,Aus,54200,0.7426378514,%null%,Kalamunda,0 (Major cities),5 (least disadvantage)
+WA,Aus,54170,0.6530507982,%null%,Joondalup,0 (Major cities),5 (least disadvantage)
+WA,Aus,54130,0.7719184017,%null%,Jerramungup,3 (Remote),4
+WA,Aus,54060,0.7436743674,%null%,Irwin,2 (Outer regional),3
+WA,Aus,53990,0.8764956743,%null%,Harvey,1 (Inner regional),4
+WA,Aus,53920,0.963871285,%null%,Halls Creek,4 (Very remote),1 (most disadvantaged)
+WA,Aus,53800,0.8064304886,%null%,Greater Geraldton,2 (Outer regional),3
+WA,Aus,53780,0.8560081612,%null%,Gosnells,0 (Major cities),3
+WA,Aus,53710,0.8371970278,%null%,Goomalling,2 (Outer regional),4
+WA,Aus,53640,0.8243789046,%null%,Gnowangerup,3 (Remote),4
+WA,Aus,53570,0.8632906937,%null%,Gingin,1 (Inner regional),3
+WA,Aus,53430,0.651853525,%null%,Fremantle,0 (Major cities),5 (least disadvantage)
+WA,Aus,53360,0.7333709338,%null%,Exmouth,4 (Very remote),5 (least disadvantage)
+WA,Aus,53290,0.7592887407,%null%,Esperance,3 (Remote),4
+WA,Aus,53220,0.8831157535,%null%,East Pilbara,4 (Very remote),2
+WA,Aus,53150,0.5543828789,%null%,East Fremantle,0 (Major cities),5 (least disadvantage)
+WA,Aus,53080,0.9296738738,%null%,Dundas,4 (Very remote),1 (most disadvantaged)
+WA,Aus,53010,0.829857283,%null%,Dumbleyung,3 (Remote),4
+WA,Aus,52940,0.8599439776,%null%,Dowerin,2 (Outer regional),3
+WA,Aus,52870,0.8907458315,%null%,Donnybrook-Balingup,1 (Inner regional),3
+WA,Aus,52800,0.9794111425,%null%,Derby-West Kimberley,4 (Very remote),1 (most disadvantaged)
+WA,Aus,52730,0.7937613754,%null%,Denmark,2 (Outer regional),4
+WA,Aus,52660,0.8417052549,%null%,Dardanup,1 (Inner regional),4
+WA,Aus,52590,0.8706739541,%null%,Dandaragan,2 (Outer regional),4
+WA,Aus,52520,0.6738597394,%null%,Dalwallinu,3 (Remote),5 (least disadvantage)
+WA,Aus,52450,0.8003220612,%null%,Cunderdin,2 (Outer regional),4
+WA,Aus,52380,0.9245283019,%null%,Cue,4 (Very remote),1 (most disadvantaged)
+WA,Aus,52310,0.8311688312,%null%,Cuballing,2 (Outer regional),3
+WA,Aus,52240,0.8233987293,%null%,Cranbrook,2 (Outer regional),2
+WA,Aus,52170,0.478571984,%null%,Cottesloe,0 (Major cities),5 (least disadvantage)
+WA,Aus,52100,0.9253019176,%null%,Corrigin,3 (Remote),4
+WA,Aus,52030,0.8399305849,%null%,Coorow,3 (Remote),3
+WA,Aus,51960,0.9311716699,%null%,Coolgardie,2 (Outer regional),1 (most disadvantaged)
+WA,Aus,51890,0.8081937277,%null%,Collie,1 (Inner regional),1 (most disadvantaged)
+WA,Aus,51820,0.701621287,%null%,Cockburn,0 (Major cities),5 (least disadvantage)
+WA,Aus,51750,0.5429323128,%null%,Claremont,0 (Major cities),5 (least disadvantage)
+WA,Aus,51680,0.7908679801,%null%,Chittering,1 (Inner regional),5 (least disadvantage)
+WA,Aus,51610,0.7486120379,%null%,Chapman Valley,2 (Outer regional),5 (least disadvantage)
+WA,Aus,51540,0.9558866303,%null%,Carnarvon,4 (Very remote),1 (most disadvantaged)
+WA,Aus,51470,0.8634730593,%null%,Carnamah,3 (Remote),3
+WA,Aus,51400,0.8255335897,%null%,Capel,1 (Inner regional),4
+WA,Aus,51330,0.8231750983,%null%,Canning,0 (Major cities),4
+WA,Aus,51310,0.5540788075,%null%,Cambridge,0 (Major cities),5 (least disadvantage)
+WA,Aus,51260,0.775737456,%null%,Busselton,1 (Inner regional),4
+WA,Aus,51190,0.8248543342,%null%,Bunbury,1 (Inner regional),2
+WA,Aus,51120,0.7842696629,%null%,Bruce Rock,3 (Remote),3
+WA,Aus,51080,0.8711943794,%null%,Broomehill-Tambellup,2 (Outer regional),2
+WA,Aus,50980,0.828521479,%null%,Broome,3 (Remote),2
+WA,Aus,50910,0.9309309309,%null%,Brookton,2 (Outer regional),2
+WA,Aus,50840,0.7081606913,%null%,Bridgetown-Greenbushes,2 (Outer regional),4
+WA,Aus,50770,0.7913977931,%null%,Boyup Brook,2 (Outer regional),4
+WA,Aus,50630,0.7479136785,%null%,Boddington,1 (Inner regional),3
+WA,Aus,50560,0.9091317088,%null%,Beverley,2 (Outer regional),2
+WA,Aus,50490,0.7526782394,%null%,Belmont,0 (Major cities),3
+WA,Aus,50420,0.6791748313,%null%,Bayswater,0 (Major cities),4
+WA,Aus,50350,0.6992374174,%null%,Bassendean,0 (Major cities),4
+WA,Aus,50280,0.7833699221,%null%,Augusta Margaret River,1 (Inner regional),5 (least disadvantage)
+WA,Aus,50250,0.7334481856,%null%,Ashburton,4 (Very remote),4
+WA,Aus,50210,0.8149449756,%null%,Armadale,0 (Major cities),3
+WA,Aus,50080,0.8410729677,%null%,Albany,2 (Outer regional),3
+Victoria,Aus,29399,0.7650106527,%null%,Unincorporated Vic,2 (Outer regional),4
+Victoria,Aus,27630,0.9545125165,%null%,Yarriambiack,2 (Outer regional),2
+Victoria,Aus,27450,0.7885325782,%null%,Yarra Ranges,0 (Major cities),5 (least disadvantage)
+Victoria,Aus,27350,0.6558249043,%null%,Yarra,0 (Major cities),5 (least disadvantage)
+Victoria,Aus,27260,0.9475750613,%null%,Wyndham,0 (Major cities),4
+Victoria,Aus,27170,0.8155310719,%null%,Wodonga,1 (Inner regional),3
+Victoria,Aus,27070,0.9119867958,%null%,Whittlesea,0 (Major cities),3
+Victoria,Aus,26980,0.8132955756,%null%,Whitehorse,0 (Major cities),5 (least disadvantage)
+Victoria,Aus,26890,0.9259032552,%null%,West Wimmera,2 (Outer regional),3
+Victoria,Aus,26810,0.9205822462,%null%,Wellington,1 (Inner regional),3
+Victoria,Aus,26730,0.8158204574,%null%,Warrnambool,1 (Inner regional),4
+Victoria,Aus,26700,0.7949339741,%null%,Wangaratta,1 (Inner regional),3
+Victoria,Aus,26670,0.8496705217,%null%,Towong,2 (Outer regional),4
+Victoria,Aus,26610,0.8713895402,%null%,Swan Hill,2 (Outer regional),2
+Victoria,Aus,26490,0.7209387453,%null%,Surf Coast,1 (Inner regional),5 (least disadvantage)
+Victoria,Aus,26430,0.9497125832,%null%,Strathbogie,1 (Inner regional),3
+Victoria,Aus,26350,0.6137312516,%null%,Stonnington,0 (Major cities),5 (least disadvantage)
+Victoria,Aus,26260,0.8685095052,%null%,Southern Grampians,1 (Inner regional),4
+Victoria,Aus,26170,0.9074755745,%null%,South Gippsland,1 (Inner regional),4
+Victoria,Aus,26080,0.7906145784,%null%,Queenscliffe,1 (Inner regional),5 (least disadvantage)
+Victoria,Aus,25990,0.9394476179,%null%,Pyrenees,1 (Inner regional),2
+Victoria,Aus,25900,0.657363473,%null%,Port Phillip,0 (Major cities),5 (least disadvantage)
+Victoria,Aus,25810,0.937030505,%null%,Northern Grampians,1 (Inner regional),2
+Victoria,Aus,25710,0.6908839041,%null%,Nillumbik,0 (Major cities),5 (least disadvantage)
+Victoria,Aus,25620,0.9164999737,%null%,Murrindindi,1 (Inner regional),4
+Victoria,Aus,25490,0.7613611011,%null%,Moyne,1 (Inner regional),5 (least disadvantage)
+Victoria,Aus,25430,0.9124793636,%null%,Mount Alexander,1 (Inner regional),4
+Victoria,Aus,25340,0.7117270725,%null%,Mornington Peninsula,0 (Major cities),5 (least disadvantage)
+Victoria,Aus,25250,0.7933273901,%null%,Moreland,0 (Major cities),4
+Victoria,Aus,25150,0.906410911,%null%,Moorabool,0 (Major cities),4
+Victoria,Aus,25060,0.7689114652,%null%,Moonee Valley,0 (Major cities),5 (least disadvantage)
+Victoria,Aus,24970,0.8607604059,%null%,Monash,0 (Major cities),5 (least disadvantage)
+Victoria,Aus,24900,0.9118833684,%null%,Moira,1 (Inner regional),2
+Victoria,Aus,24850,0.924017259,%null%,Mitchell,1 (Inner regional),4
+Victoria,Aus,24780,0.8437496333,%null%,Mildura,2 (Outer regional),2
+Victoria,Aus,24650,0.9321542314,%null%,Melton,0 (Major cities),3
+Victoria,Aus,24600,0.6882474704,%null%,Melbourne,0 (Major cities),4
+Victoria,Aus,24410,0.7752749271,%null%,Maroondah,0 (Major cities),5 (least disadvantage)
+Victoria,Aus,24330,0.7953821658,%null%,Maribyrnong,0 (Major cities),4
+Victoria,Aus,24250,0.6274673129,%null%,Mansfield,2 (Outer regional),5 (least disadvantage)
+Victoria,Aus,24210,0.8358978467,%null%,Manningham,0 (Major cities),5 (least disadvantage)
+Victoria,Aus,24130,0.8633834919,%null%,Macedon Ranges,1 (Inner regional),5 (least disadvantage)
+Victoria,Aus,23940,0.9434502379,%null%,Loddon,2 (Outer regional),2
+Victoria,Aus,23810,0.9500763426,%null%,Latrobe (Vic.),1 (Inner regional),2
+Victoria,Aus,23670,0.8544887143,%null%,Knox,0 (Major cities),5 (least disadvantage)
+Victoria,Aus,23430,0.8031502506,%null%,Kingston (Vic.),0 (Major cities),5 (least disadvantage)
+Victoria,Aus,23350,0.7788260315,%null%,Indigo,1 (Inner regional),5 (least disadvantage)
+Victoria,Aus,23270,0.9298838378,%null%,Hume,0 (Major cities),2
+Victoria,Aus,23190,0.9056615528,%null%,Horsham,2 (Outer regional),3
+Victoria,Aus,23110,0.8118222381,%null%,Hobsons Bay,0 (Major cities),4
+Victoria,Aus,22980,0.9413827252,%null%,Hindmarsh,2 (Outer regional),2
+Victoria,Aus,22910,0.9274897607,%null%,Hepburn,1 (Inner regional),4
+Victoria,Aus,22830,0.874821371,%null%,Greater Shepparton,1 (Inner regional),2
+Victoria,Aus,22750,0.779501883,%null%,Greater Geelong,0 (Major cities),4
+Victoria,Aus,22670,0.9587432409,%null%,Greater Dandenong,0 (Major cities),1 (most disadvantaged)
+Victoria,Aus,22620,0.8886798215,%null%,Greater Bendigo,1 (Inner regional),3
+Victoria,Aus,22490,0.859250862,%null%,Golden Plains,1 (Inner regional),5 (least disadvantage)
+Victoria,Aus,22410,0.9552811469,%null%,Glenelg,2 (Outer regional),2
+Victoria,Aus,22310,0.7315734228,%null%,Glen Eira,0 (Major cities),5 (least disadvantage)
+Victoria,Aus,22250,0.8363948638,%null%,Gannawarra,2 (Outer regional),2
+Victoria,Aus,22170,0.8631309446,%null%,Frankston,0 (Major cities),4
+Victoria,Aus,22110,0.8319527618,%null%,East Gippsland,2 (Outer regional),2
+Victoria,Aus,21890,0.7809931791,%null%,Darebin,0 (Major cities),4
+Victoria,Aus,21830,0.8142975058,%null%,Corangamite,1 (Inner regional),3
+Victoria,Aus,21750,0.8635904377,%null%,Colac Otway,1 (Inner regional),3
+Victoria,Aus,21670,0.9576344554,%null%,Central Goldfields,1 (Inner regional),1 (most disadvantaged)
+Victoria,Aus,21610,0.9313520067,%null%,Casey,0 (Major cities),4
+Victoria,Aus,21450,0.9070044661,%null%,Cardinia,0 (Major cities),4
+Victoria,Aus,21370,0.7949336218,%null%,Campaspe,1 (Inner regional),2
+Victoria,Aus,21270,0.9447737785,%null%,Buloke,2 (Outer regional),3
+Victoria,Aus,21180,0.9321121349,%null%,Brimbank,0 (Major cities),1 (most disadvantaged)
+Victoria,Aus,21110,0.6711955516,%null%,Boroondara,0 (Major cities),5 (least disadvantage)
+Victoria,Aus,21010,0.9408684312,%null%,Benalla,1 (Inner regional),3
+Victoria,Aus,20910,0.6050925989,%null%,Bayside (Vic.),0 (Major cities),5 (least disadvantage)
+Victoria,Aus,20830,0.9127062829,%null%,Baw Baw,1 (Inner regional),4
+Victoria,Aus,20740,0.8826229093,%null%,Bass Coast,1 (Inner regional),4
+Victoria,Aus,20660,0.7364229824,%null%,Banyule,0 (Major cities),5 (least disadvantage)
+Victoria,Aus,20570,0.9074834977,%null%,Ballarat,1 (Inner regional),3
+Victoria,Aus,20260,0.9679273369,%null%,Ararat,1 (Inner regional),2
+Victoria,Aus,20110,0.8227303854,%null%,Alpine,1 (Inner regional),5 (least disadvantage)
+Tasmania,Aus,65810,0.8093293991,%null%,West Tamar,1 (Inner regional),4
+Tasmania,Aus,65610,0.9671429108,%null%,West Coast,3 (Remote),1 (most disadvantaged)
+Tasmania,Aus,65410,0.9703553092,%null%,Waratah-Wynyard,2 (Outer regional),1 (most disadvantaged)
+Tasmania,Aus,65210,0.9036413172,%null%,Tasman,2 (Outer regional),1 (most disadvantaged)
+Tasmania,Aus,65010,0.8524520283,%null%,Southern Midlands,2 (Outer regional),2
+Tasmania,Aus,64810,0.7506352584,%null%,Sorell,1 (Inner regional),3
+Tasmania,Aus,64610,0.8356801157,%null%,Northern Midlands,1 (Inner regional),3
+Tasmania,Aus,64210,0.8236678738,%null%,Meander Valley,1 (Inner regional),3
+Tasmania,Aus,64010,0.765413145,%null%,Launceston,1 (Inner regional),2
+Tasmania,Aus,63810,0.9217199616,%null%,Latrobe (Tas.),2 (Outer regional),3
+Tasmania,Aus,63610,0.6189054174,%null%,Kingborough,1 (Inner regional),5 (least disadvantage)
+Tasmania,Aus,63410,0.9780346821,%null%,King Island,4 (Very remote),4
+Tasmania,Aus,63210,0.907875434,%null%,Kentish,2 (Outer regional),2
+Tasmania,Aus,63010,0.7713166548,%null%,Huon Valley,2 (Outer regional),3
+Tasmania,Aus,62810,0.5887769487,%null%,Hobart,1 (Inner regional),5 (least disadvantage)
+Tasmania,Aus,62610,0.7728256961,%null%,Glenorchy,1 (Inner regional),1 (most disadvantaged)
+Tasmania,Aus,62410,0.9353044523,%null%,Glamorgan-Spring Bay,3 (Remote),2
+Tasmania,Aus,62210,0.9367447674,%null%,George Town,2 (Outer regional),1 (most disadvantaged)
+Tasmania,Aus,62010,0.9838274933,%null%,Flinders (Tas.),4 (Very remote),2
+Tasmania,Aus,61810,0.9098546884,%null%,Dorset,2 (Outer regional),2
+Tasmania,Aus,61610,0.9182616068,%null%,Devonport,2 (Outer regional),1 (most disadvantaged)
+Tasmania,Aus,61510,0.7661004138,%null%,Derwent Valley,1 (Inner regional),1 (most disadvantaged)
+Tasmania,Aus,61410,0.6099306984,%null%,Clarence,1 (Inner regional),4
+Tasmania,Aus,61210,0.9331083465,%null%,Circular Head,2 (Outer regional),2
+Tasmania,Aus,61010,0.7885289441,%null%,Central Highlands (Tas.),2 (Outer regional),1 (most disadvantaged)
+Tasmania,Aus,60810,0.9178671451,%null%,Central Coast (Tas.),2 (Outer regional),2
+Tasmania,Aus,60610,0.9524565745,%null%,Burnie,2 (Outer regional),1 (most disadvantaged)
+Tasmania,Aus,60410,0.7824749491,%null%,Brighton,1 (Inner regional),1 (most disadvantaged)
+Tasmania,Aus,60210,0.9357167306,%null%,Break O'Day,2 (Outer regional),1 (most disadvantaged)
+SA,Aus,49399,0.9486207289,%null%,Unincorporated SA,4 (Very remote),1 (most disadvantaged)
+SA,Aus,48830,0.8943931843,%null%,Yorke Peninsula,2 (Outer regional),2
+SA,Aus,48750,0.9121711249,%null%,Yankalilla,1 (Inner regional),3
+SA,Aus,48640,0.9417698071,%null%,Wudinna,4 (Very remote),4
+SA,Aus,48540,0.987891243,%null%,Whyalla,2 (Outer regional),1 (most disadvantaged)
+SA,Aus,48410,0.7591743491,%null%,West Torrens,0 (Major cities),4
+SA,Aus,48340,0.8189654472,%null%,Wattle Range,2 (Outer regional),2
+SA,Aus,48260,0.698738129,%null%,Walkerville,0 (Major cities),5 (least disadvantage)
+SA,Aus,48130,0.91407121,%null%,Wakefield,1 (Inner regional),1 (most disadvantaged)
+SA,Aus,48050,0.9340407866,%null%,Victor Harbor,1 (Inner regional),2
+SA,Aus,47980,0.5955107597,%null%,Unley,0 (Major cities),5 (least disadvantage)
+SA,Aus,47910,0.9168748281,%null%,Tumby Bay,3 (Remote),4
+SA,Aus,47800,0.894698593,%null%,Coorong,2 (Outer regional),2
+SA,Aus,47700,0.8303658611,%null%,Tea Tree Gully,0 (Major cities),5 (least disadvantage)
+SA,Aus,47630,0.9415853713,%null%,Tatiara,2 (Outer regional),3
+SA,Aus,47490,0.7607905077,%null%,Streaky Bay,4 (Very remote),4
+SA,Aus,47290,0.9160546881,%null%,Southern Mallee,3 (Remote),4
+SA,Aus,47140,0.9084888612,%null%,Salisbury,0 (Major cities),1 (most disadvantaged)
+SA,Aus,46970,0.953433307,%null%,Roxby Downs,3 (Remote),5 (least disadvantage)
+SA,Aus,46860,0.8375960277,%null%,Robe,2 (Outer regional),4
+SA,Aus,46670,0.8968932907,%null%,Renmark Paringa,2 (Outer regional),1 (most disadvantaged)
+SA,Aus,46510,0.7273374146,%null%,Prospect,0 (Major cities),5 (least disadvantage)
+SA,Aus,46450,0.9626860384,%null%,Port Pirie,2 (Outer regional),1 (most disadvantaged)
+SA,Aus,46300,0.8915340547,%null%,Port Lincoln,3 (Remote),2
+SA,Aus,46090,0.9802053413,%null%,Port Augusta,2 (Outer regional),1 (most disadvantaged)
+SA,Aus,45890,0.8522181526,%null%,Port Adelaide Enfield,0 (Major cities),2
+SA,Aus,45680,0.9161662682,%null%,Playford,0 (Major cities),1 (most disadvantaged)
+SA,Aus,45540,0.9655290083,%null%,Peterborough,2 (Outer regional),1 (most disadvantaged)
+SA,Aus,45340,0.7726019817,%null%,Onkaparinga,0 (Major cities),3
+SA,Aus,45290,0.7417912308,%null%,Norwood Payneham and St Peters,0 (Major cities),5 (least disadvantage)
+SA,Aus,45120,0.8839464308,%null%,Northern Areas,2 (Outer regional),3
+SA,Aus,45090,0.7486144217,%null%,Naracoorte Lucindale,2 (Outer regional),3
+SA,Aus,45040,0.9668511326,%null%,Murray Bridge,1 (Inner regional),1 (most disadvantaged)
+SA,Aus,44830,0.9208868428,%null%,Mount Remarkable,2 (Outer regional),3
+SA,Aus,44620,0.797081049,%null%,Mount Gambier,2 (Outer regional),1 (most disadvantaged)
+SA,Aus,44550,0.7323211501,%null%,Mount Barker,0 (Major cities),5 (least disadvantage)
+SA,Aus,44340,0.6587636727,%null%,Mitcham,0 (Major cities),5 (least disadvantage)
+SA,Aus,44210,0.9046122856,%null%,Mid Murray,1 (Inner regional),1 (most disadvantaged)
+SA,Aus,44060,0.7759687249,%null%,Marion,0 (Major cities),4
+SA,Aus,43790,0.8377258088,%null%,Loxton Waikerie,2 (Outer regional),2
+SA,Aus,43710,0.7890235431,%null%,Lower Eyre Peninsula,3 (Remote),5 (least disadvantage)
+SA,Aus,43650,0.7593940071,%null%,Light,1 (Inner regional),5 (least disadvantage)
+SA,Aus,43360,0.7732970711,%null%,Kingston (SA),2 (Outer regional),3
+SA,Aus,43220,0.9099450501,%null%,Kimba,3 (Remote),4
+SA,Aus,43080,0.9477794137,%null%,Karoonda East Murray,2 (Outer regional),2
+SA,Aus,42750,0.9349904398,%null%,Kangaroo Island,3 (Remote),4
+SA,Aus,42600,0.7025346153,%null%,Holdfast Bay,0 (Major cities),5 (least disadvantage)
+SA,Aus,42250,0.7424880192,%null%,Grant,2 (Outer regional),4
+SA,Aus,42110,0.8820143226,%null%,Goyder,2 (Outer regional),2
+SA,Aus,42030,0.7655717591,%null%,Gawler,0 (Major cities),2
+SA,Aus,41960,0.9542372881,%null%,Franklin Harbour,3 (Remote),2
+SA,Aus,41830,0.9182567962,%null%,Flinders Ranges,2 (Outer regional),2
+SA,Aus,41750,0.8734049118,%null%,Elliston,4 (Very remote),2
+SA,Aus,41560,0.8555199195,%null%,Copper Coast,2 (Outer regional),1 (most disadvantaged)
+SA,Aus,41330,0.9718309859,%null%,Coober Pedy,4 (Very remote),1 (most disadvantaged)
+SA,Aus,41190,0.9286189137,%null%,Cleve,3 (Remote),3
+SA,Aus,41140,0.8494944382,%null%,Clare and Gilbert Valleys,1 (Inner regional),4
+SA,Aus,41060,0.7867183209,%null%,Charles Sturt,0 (Major cities),4
+SA,Aus,41010,0.9304822229,%null%,Ceduna,4 (Very remote),2
+SA,Aus,40910,0.7819613953,%null%,Campbelltown (SA),0 (Major cities),4
+SA,Aus,40700,0.6814216076,%null%,Burnside,0 (Major cities),5 (least disadvantage)
+SA,Aus,40520,0.8694998492,%null%,Berri Barmera,2 (Outer regional),1 (most disadvantaged)
+SA,Aus,40430,0.9169132723,%null%,Barunga West,2 (Outer regional),2
+SA,Aus,40310,0.7350097041,%null%,Barossa,1 (Inner regional),4
+SA,Aus,40220,0.8335413734,%null%,Alexandrina,1 (Inner regional),3
+SA,Aus,40150,0.8586715895,%null%,Adelaide Plains,1 (Inner regional),3
+SA,Aus,40120,0.6861206924,%null%,Adelaide Hills,0 (Major cities),5 (least disadvantage)
+SA,Aus,40070,0.698010491,%null%,Adelaide,0 (Major cities),4
+Queensland,Aus,37600,0.8642621145,%null%,Yarrabah,2 (Outer regional),1 (most disadvantaged)
+Queensland,Aus,37400,0.8750954665,%null%,Winton,4 (Very remote),4
+Queensland,Aus,37340,0.8126509738,%null%,Whitsunday,2 (Outer regional),3
+Queensland,Aus,37310,0.8399765952,%null%,Western Downs,2 (Outer regional),2
+Queensland,Aus,37300,0.9569055036,%null%,Weipa,4 (Very remote),5 (least disadvantage)
+Queensland,Aus,37010,0.8507496915,%null%,Townsville,2 (Outer regional),3
+Queensland,Aus,36960,0.9894694208,%null%,Torres Strait Island,4 (Very remote),1 (most disadvantaged)
+Queensland,Aus,36950,0.9893979674,%null%,Torres,4 (Very remote),1 (most disadvantaged)
+Queensland,Aus,36910,0.8436994789,%null%,Toowoomba,1 (Inner regional),3
+Queensland,Aus,36820,0.7567056215,%null%,Tablelands,2 (Outer regional),2
+Queensland,Aus,36720,0.7264619374,%null%,Sunshine Coast,0 (Major cities),4
+Queensland,Aus,36660,0.8695479925,%null%,Southern Downs,1 (Inner regional),2
+Queensland,Aus,36630,0.8766401539,%null%,South Burnett,1 (Inner regional),1 (most disadvantaged)
+Queensland,Aus,36580,0.9020977896,%null%,Somerset,1 (Inner regional),2
+Queensland,Aus,36510,0.8693710445,%null%,Scenic Rim,1 (Inner regional),3
+Queensland,Aus,36370,0.8368019325,%null%,Rockhampton,1 (Inner regional),2
+Queensland,Aus,36300,0.8754940711,%null%,Richmond,4 (Very remote),4
+Queensland,Aus,36250,0.7350054664,%null%,Redland,0 (Major cities),4
+Queensland,Aus,36150,0.9665738164,%null%,Quilpie,4 (Very remote),4
+Queensland,Aus,35800,0.9525594972,%null%,Paroo,4 (Very remote),1 (most disadvantaged)
+Queensland,Aus,35790,0.8651211802,%null%,Palm Island,3 (Remote),1 (most disadvantaged)
+Queensland,Aus,35760,0.9475779958,%null%,North Burnett,2 (Outer regional),1 (most disadvantaged)
+Queensland,Aus,35740,0.6673816479,%null%,Noosa,0 (Major cities),5 (least disadvantage)
+Queensland,Aus,35670,0.9569055421,%null%,Napranum,4 (Very remote),1 (most disadvantaged)
+Queensland,Aus,35600,0.9337660756,%null%,Murweh,4 (Very remote),2
+Queensland,Aus,35300,0.7737298045,%null%,Mount Isa,3 (Remote),3
+Queensland,Aus,35010,0.7956947138,%null%,Moreton Bay,0 (Major cities),4
+Queensland,Aus,34880,0.7649895211,%null%,Mareeba,2 (Outer regional),2
+Queensland,Aus,34860,0.6695772289,%null%,Maranoa,2 (Outer regional),4
+Queensland,Aus,34800,0.7868235862,%null%,McKinlay,4 (Very remote),4
+Queensland,Aus,34770,0.7825383482,%null%,Mackay,1 (Inner regional),4
+Queensland,Aus,34710,0.9428241144,%null%,Longreach,4 (Very remote),4
+Queensland,Aus,34590,0.8935028952,%null%,Logan,0 (Major cities),2
+Queensland,Aus,34580,0.9476060442,%null%,Lockyer Valley,1 (Inner regional),2
+Queensland,Aus,34530,0.8270799761,%null%,Livingstone,1 (Inner regional),4
+Queensland,Aus,33980,0.6243709728,%null%,Isaac,2 (Outer regional),4
+Queensland,Aus,33960,0.8695650663,%null%,Ipswich,0 (Major cities),2
+Queensland,Aus,33800,0.9377736491,%null%,Hinchinbrook,2 (Outer regional),2
+Queensland,Aus,33620,0.874990942,%null%,Gympie,1 (Inner regional),2
+Queensland,Aus,33610,0.7148006415,%null%,Goondiwindi,2 (Outer regional),2
+Queensland,Aus,33430,0.8447973039,%null%,Gold Coast,0 (Major cities),4
+Queensland,Aus,33360,0.8109425881,%null%,Gladstone,1 (Inner regional),2
+Queensland,Aus,33220,0.9371265431,%null%,Fraser Coast,1 (Inner regional),1 (most disadvantaged)
+Queensland,Aus,33200,0.8794131124,%null%,Flinders (Qld),4 (Very remote),3
+Queensland,Aus,33100,0.8658076298,%null%,Etheridge,4 (Very remote),3
+Queensland,Aus,32810,0.8514072844,%null%,Douglas,2 (Outer regional),3
+Queensland,Aus,32600,0.8652325374,%null%,Croydon,4 (Very remote),1 (most disadvantaged)
+Queensland,Aus,32500,0.9675537699,%null%,Cook,3 (Remote),1 (most disadvantaged)
+Queensland,Aus,32450,0.928181802,%null%,Cloncurry,3 (Remote),3
+Queensland,Aus,32330,0.9397752809,%null%,Cherbourg,1 (Inner regional),1 (most disadvantaged)
+Queensland,Aus,32310,0.8299287244,%null%,Charters Towers,2 (Outer regional),2
+Queensland,Aus,32270,0.6847354632,%null%,Central Highlands (Qld),2 (Outer regional),4
+Queensland,Aus,32260,0.7585454049,%null%,Cassowary Coast,2 (Outer regional),2
+Queensland,Aus,32250,0.9316093714,%null%,Carpentaria,4 (Very remote),1 (most disadvantaged)
+Queensland,Aus,32080,0.8473765549,%null%,Cairns,2 (Outer regional),3
+Queensland,Aus,31900,0.9355565854,%null%,Burdekin,2 (Outer regional),3
+Queensland,Aus,31820,0.8772943745,%null%,Bundaberg,1 (Inner regional),1 (most disadvantaged)
+Queensland,Aus,31000,0.6988991408,%null%,Brisbane,0 (Major cities),5 (least disadvantage)
+Queensland,Aus,30760,0.9434697856,%null%,Blackall Tambo,4 (Very remote),2
+Queensland,Aus,30410,0.9333724789,%null%,Barcaldine,4 (Very remote),4
+Queensland,Aus,30370,0.8778784878,%null%,Banana,2 (Outer regional),4
+Queensland,Aus,30300,0.9344631212,%null%,Balonne,3 (Remote),2
+OT,Aus,99399,0.9510775042,%null%,Unincorp. Other Territories,4 (Very remote),3
+NT,Aus,79399,0.9489766003,%null%,Unincorporated NT,4 (Very remote),5 (least disadvantage)
+NT,Aus,74680,0.9869439072,%null%,West Daly,3 (Remote),1 (most disadvantaged)
+NT,Aus,74660,0.9725932792,%null%,West Arnhem,4 (Very remote),1 (most disadvantaged)
+NT,Aus,74550,0.9783425791,%null%,Victoria Daly,4 (Very remote),1 (most disadvantaged)
+NT,Aus,73600,0.9759198353,%null%,Roper Gulf,4 (Very remote),1 (most disadvantaged)
+NT,Aus,72800,0.9547643112,%null%,Palmerston,2 (Outer regional),4
+NT,Aus,72330,0.9831132168,%null%,MacDonnell,4 (Very remote),1 (most disadvantaged)
+NT,Aus,72300,0.931596487,%null%,Litchfield,2 (Outer regional),5 (least disadvantage)
+NT,Aus,72200,0.8491894433,%null%,Katherine,3 (Remote),2
+NT,Aus,71300,0.97993685,%null%,East Arnhem,4 (Very remote),1 (most disadvantaged)
+NT,Aus,71000,0.8850544206,%null%,Darwin,2 (Outer regional),5 (least disadvantage)
+NT,Aus,70700,0.975689789,%null%,Coomalie,3 (Remote),1 (most disadvantaged)
+NT,Aus,70620,0.9827336204,%null%,Central Desert,4 (Very remote),1 (most disadvantaged)
+NT,Aus,70420,0.9667499546,%null%,Barkly,4 (Very remote),1 (most disadvantaged)
+NT,Aus,70200,0.8411282997,%null%,Alice Springs,3 (Remote),4
+NSW,Aus,19399,0.8399019163,%null%,Unincorporated NSW,4 (Very remote),5 (least disadvantage)
+NSW,Aus,18710,0.8162604641,%null%,Yass Valley,1 (Inner regional),5 (least disadvantage)
+NSW,Aus,18500,0.5665882029,%null%,Woollahra,0 (Major cities),5 (least disadvantage)
+NSW,Aus,18450,0.8464960089,%null%,Wollongong,0 (Major cities),4
+NSW,Aus,18400,0.9583487067,%null%,Wollondilly,1 (Inner regional),5 (least disadvantage)
+NSW,Aus,18350,0.8381140412,%null%,Wingecarribee,1 (Inner regional),5 (least disadvantage)
+NSW,Aus,18250,0.7707927728,%null%,Willoughby,0 (Major cities),5 (least disadvantage)
+NSW,Aus,18200,0.8467013483,%null%,Wentworth,2 (Outer regional),3
+NSW,Aus,18100,0.9521633245,%null%,Weddin,2 (Outer regional),2
+NSW,Aus,18050,0.6199151318,%null%,Waverley,0 (Major cities),5 (least disadvantage)
+NSW,Aus,18020,0.91322528,%null%,Warrumbungle,2 (Outer regional),1 (most disadvantaged)
+NSW,Aus,17950,0.9338541013,%null%,Warren,2 (Outer regional),2
+NSW,Aus,17900,0.9412913451,%null%,Walgett,3 (Remote),1 (most disadvantaged)
+NSW,Aus,17850,0.8476319952,%null%,Walcha,2 (Outer regional),4
+NSW,Aus,17750,0.8385184858,%null%,Wagga Wagga,1 (Inner regional),3
+NSW,Aus,17650,0.832494959,%null%,Uralla,1 (Inner regional),3
+NSW,Aus,17640,0.8963854449,%null%,Upper Lachlan,1 (Inner regional),4
+NSW,Aus,17620,0.8817056563,%null%,Upper Hunter,1 (Inner regional),3
+NSW,Aus,17550,0.8386917237,%null%,Tweed,0 (Major cities),3
+NSW,Aus,17420,0.9119197868,%null%,The Hills,0 (Major cities),5 (least disadvantage)
+NSW,Aus,17400,0.9339404404,%null%,Tenterfield,2 (Outer regional),1 (most disadvantaged)
+NSW,Aus,17350,0.9027795314,%null%,Temora,2 (Outer regional),3
+NSW,Aus,17310,0.7732497897,%null%,Tamworth,1 (Inner regional),2
+NSW,Aus,17200,0.7336385383,%null%,Sydney,0 (Major cities),5 (least disadvantage)
+NSW,Aus,17150,0.7638921295,%null%,Sutherland,0 (Major cities),5 (least disadvantage)
+NSW,Aus,17100,0.9568587301,%null%,Strathfield,0 (Major cities),4
+NSW,Aus,17080,0.9338066202,%null%,Snowy Valleys,1 (Inner regional),2
+NSW,Aus,17040,0.9334906048,%null%,Snowy Monaro,2 (Outer regional),4
+NSW,Aus,17000,0.911276205,%null%,Singleton,1 (Inner regional),4
+NSW,Aus,16950,0.9151427085,%null%,Shoalhaven,1 (Inner regional),3
+NSW,Aus,16900,0.9010126157,%null%,Shellharbour,0 (Major cities),3
+NSW,Aus,16700,0.8152045694,%null%,Ryde,0 (Major cities),5 (least disadvantage)
+NSW,Aus,16610,0.9133765071,%null%,Richmond Valley,1 (Inner regional),1 (most disadvantaged)
+NSW,Aus,16550,0.7547418071,%null%,Randwick,0 (Major cities),5 (least disadvantage)
+NSW,Aus,16490,0.5794798252,%null%,Queanbeyan-Palerang,0 (Major cities),5 (least disadvantage)
+NSW,Aus,16400,0.8744474916,%null%,Port Stephens,1 (Inner regional),3
+NSW,Aus,16380,0.9238124899,%null%,Port Macquarie-Hastings,1 (Inner regional),3
+NSW,Aus,16350,0.9623914366,%null%,Penrith,0 (Major cities),3
+NSW,Aus,16260,0.9258902865,%null%,Parramatta,0 (Major cities),5 (least disadvantage)
+NSW,Aus,16200,0.9152166271,%null%,Parkes,2 (Outer regional),2
+NSW,Aus,16150,0.8804180919,%null%,Orange,1 (Inner regional),4
+NSW,Aus,16100,0.9647174216,%null%,Oberon,1 (Inner regional),3
+NSW,Aus,15990,0.6773312064,%null%,Northern Beaches,0 (Major cities),5 (least disadvantage)
+NSW,Aus,15950,0.649116491,%null%,North Sydney,0 (Major cities),5 (least disadvantage)
+NSW,Aus,15900,0.6399540118,%null%,Newcastle,0 (Major cities),4
+NSW,Aus,15850,0.8808812166,%null%,Narromine,2 (Outer regional),2
+NSW,Aus,15800,0.9185812877,%null%,Narrandera,2 (Outer regional),1 (most disadvantaged)
+NSW,Aus,15750,0.9613090247,%null%,Narrabri,2 (Outer regional),2
+NSW,Aus,15700,0.8620831561,%null%,Nambucca Valley,1 (Inner regional),1 (most disadvantaged)
+NSW,Aus,15650,0.9454946302,%null%,Muswellbrook,1 (Inner regional),2
+NSW,Aus,15560,0.893590144,%null%,Murrumbidgee,2 (Outer regional),3
+NSW,Aus,15520,0.7615840367,%null%,Murray River,1 (Inner regional),4
+NSW,Aus,15350,0.5338463634,%null%,Mosman,0 (Major cities),5 (least disadvantage)
+NSW,Aus,15300,0.841495305,%null%,Moree Plains,2 (Outer regional),2
+NSW,Aus,15270,0.8249142686,%null%,Mid-Western,1 (Inner regional),3
+NSW,Aus,15240,0.8908767778,%null%,Mid-Coast,1 (Inner regional),2
+NSW,Aus,15050,0.7306045554,%null%,Maitland,0 (Major cities),3
+NSW,Aus,14950,0.8957969418,%null%,Lockhart,2 (Outer regional),3
+NSW,Aus,14920,0.8924391645,%null%,Liverpool Plains,2 (Outer regional),1 (most disadvantaged)
+NSW,Aus,14900,0.9788269874,%null%,Liverpool,0 (Major cities),2
+NSW,Aus,14870,0.9023849392,%null%,Lithgow,1 (Inner regional),2
+NSW,Aus,14850,0.8302037355,%null%,Lismore,1 (Inner regional),3
+NSW,Aus,14750,0.8565366055,%null%,Leeton,2 (Outer regional),2
+NSW,Aus,14700,0.6970889795,%null%,Lane Cove,0 (Major cities),5 (least disadvantage)
+NSW,Aus,14650,0.7057529395,%null%,Lake Macquarie,0 (Major cities),4
+NSW,Aus,14600,0.9415655384,%null%,Lachlan,3 (Remote),2
+NSW,Aus,14550,0.9263078999,%null%,Kyogle,1 (Inner regional),1 (most disadvantaged)
+NSW,Aus,14500,0.7296990583,%null%,Ku-ring-gai,0 (Major cities),5 (least disadvantage)
+NSW,Aus,14400,0.7429781813,%null%,Kiama,0 (Major cities),5 (least disadvantage)
+NSW,Aus,14350,0.9467380709,%null%,Kempsey,1 (Inner regional),1 (most disadvantaged)
+NSW,Aus,14300,0.9545298065,%null%,Junee,1 (Inner regional),2
+NSW,Aus,14220,0.7415052216,%null%,Inverell,2 (Outer regional),1 (most disadvantaged)
+NSW,Aus,14170,0.7466781421,%null%,Inner West,0 (Major cities),5 (least disadvantage)
+NSW,Aus,14100,0.6934442842,%null%,Hunters Hill,0 (Major cities),5 (least disadvantage)
+NSW,Aus,14000,0.8545084063,%null%,Hornsby,0 (Major cities),5 (least disadvantage)
+NSW,Aus,13910,0.9473381138,%null%,Hilltops,1 (Inner regional),2
+NSW,Aus,13850,0.9618561911,%null%,Hay,2 (Outer regional),2
+NSW,Aus,13800,0.899280066,%null%,Hawkesbury,0 (Major cities),4
+NSW,Aus,13660,0.9291967293,%null%,Gwydir,2 (Outer regional),2
+NSW,Aus,13550,0.8344281256,%null%,Gunnedah,2 (Outer regional),3
+NSW,Aus,13450,0.8564309762,%null%,Griffith,2 (Outer regional),3
+NSW,Aus,13340,0.8634823795,%null%,Greater Hume,1 (Inner regional),4
+NSW,Aus,13310,0.9213498424,%null%,Goulburn Mulwaree,1 (Inner regional),3
+NSW,Aus,13010,0.83760028,%null%,Glen Innes Severn,1 (Inner regional),1 (most disadvantaged)
+NSW,Aus,12950,0.9550313757,%null%,Gilgandra,2 (Outer regional),2
+NSW,Aus,12930,0.8719373862,%null%,Georges River,0 (Major cities),4
+NSW,Aus,12900,0.9370496703,%null%,Forbes,2 (Outer regional),3
+NSW,Aus,12870,0.8417230676,%null%,Federation,1 (Inner regional),3
+NSW,Aus,12850,0.9888081647,%null%,Fairfield,0 (Major cities),1 (most disadvantaged)
+NSW,Aus,12750,0.8548066135,%null%,Eurobodalla,1 (Inner regional),3
+NSW,Aus,12730,0.8416106207,%null%,Edward River,1 (Inner regional),3
+NSW,Aus,12700,0.8266748694,%null%,Dungog,1 (Inner regional),4
+NSW,Aus,12390,0.8419439987,%null%,Dubbo,1 (Inner regional),3
+NSW,Aus,12380,0.9827202003,%null%,Cumberland,0 (Major cities),1 (most disadvantaged)
+NSW,Aus,12350,0.9258052654,%null%,Cowra,1 (Inner regional),2
+NSW,Aus,12160,0.9165432562,%null%,Cootamundra-Gundagai,1 (Inner regional),2
+NSW,Aus,12150,0.9716744725,%null%,Coonamble,3 (Remote),1 (most disadvantaged)
+NSW,Aus,12000,0.9182320922,%null%,Coolamon,1 (Inner regional),3
+NSW,Aus,11800,0.8582670031,%null%,Coffs Harbour,1 (Inner regional),3
+NSW,Aus,11750,0.9658828999,%null%,Cobar,3 (Remote),3
+NSW,Aus,11730,0.8372238922,%null%,Clarence Valley,1 (Inner regional),2
+NSW,Aus,11720,0.8926905957,%null%,Cessnock,0 (Major cities),2
+NSW,Aus,11700,0.9491629223,%null%,Central Darling,4 (Very remote),1 (most disadvantaged)
+NSW,Aus,11650,0.799975071,%null%,Central Coast (NSW),0 (Major cities),4
+NSW,Aus,11600,0.9113746778,%null%,Carrathool,3 (Remote),3
+NSW,Aus,11570,0.9573313231,%null%,Canterbury-Bankstown,0 (Major cities),1 (most disadvantaged)
+NSW,Aus,11520,0.8320001231,%null%,Canada Bay,0 (Major cities),5 (least disadvantage)
+NSW,Aus,11500,0.9820890698,%null%,Campbelltown (NSW),0 (Major cities),2
+NSW,Aus,11450,0.9446753243,%null%,Camden,0 (Major cities),5 (least disadvantage)
+NSW,Aus,11400,0.8810215918,%null%,Cabonne,1 (Inner regional),4
+NSW,Aus,11350,0.8022113559,%null%,Byron,1 (Inner regional),4
+NSW,Aus,11300,0.9389825057,%null%,Burwood,0 (Major cities),3
+NSW,Aus,11250,0.900829116,%null%,Broken Hill,2 (Outer regional),1 (most disadvantaged)
+NSW,Aus,11200,0.9655644715,%null%,Brewarrina,4 (Very remote),1 (most disadvantaged)
+NSW,Aus,11150,0.9728882365,%null%,Bourke,4 (Very remote),2
+NSW,Aus,10950,0.947934495,%null%,Bogan,3 (Remote),3
+NSW,Aus,10900,0.8458075732,%null%,Blue Mountains,0 (Major cities),5 (least disadvantage)
+NSW,Aus,10850,0.9151061297,%null%,Blayney,1 (Inner regional),3
+NSW,Aus,10800,0.9566089785,%null%,Bland,2 (Outer regional),4
+NSW,Aus,10750,0.9769101659,%null%,Blacktown,0 (Major cities),3
+NSW,Aus,10650,0.9645585314,%null%,Berrigan,1 (Inner regional),3
+NSW,Aus,10600,0.8492768758,%null%,Bellingen,1 (Inner regional),3
+NSW,Aus,10550,0.7954414496,%null%,Bega Valley,2 (Outer regional),3
+NSW,Aus,10500,0.8563348976,%null%,Bayside (NSW),0 (Major cities),4
+NSW,Aus,10470,0.9322735013,%null%,Bathurst,1 (Inner regional),4
+NSW,Aus,10300,0.9348516043,%null%,Balranald,2 (Outer regional),2
+NSW,Aus,10250,0.8485924782,%null%,Ballina,1 (Inner regional),4
+NSW,Aus,10180,0.7699004307,%null%,Armidale,1 (Inner regional),3
+NSW,Aus,10050,0.7881278764,%null%,Albury,1 (Inner regional),3
+ACT,Aus,89399,0.5496999569,%null%,Unincorporated ACT,0 (Major cities),5 (least disadvantage)

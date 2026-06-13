@@ -1,0 +1,20 @@
+Type: Project
+Package: workbenchblog
+Title: Aydin Workbench Blog
+Version: 0.0.0.9000
+Imports:
+    broom,
+    dplyr,
+    forcats,
+    ggplot2,
+    knitr,
+    lubridate,
+    purrr,
+    randomForest,
+    rmarkdown,
+    readr,
+    readxl,
+    scales,
+    stringr,
+    tibble,
+    tidyr

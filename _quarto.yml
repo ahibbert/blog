@@ -1,0 +1,55 @@
+project:
+  type: website
+  output-dir: _site
+  resources:
+    - CNAME
+
+website:
+  title: "Aydin's Workbench Blog"
+  description: "Notes and essays from Aydin Sareff-Hibbert on statistical modelling, research software, data work, and open questions."
+  site-url: "https://blog.aydins-workbench.com"
+  navbar:
+    title: "Aydin's Workbench"
+    left:
+      - text: "Posts"
+        href: index.qmd#posts
+      - text: "Themes"
+        href: index.qmd#threads
+      - text: "About"
+        href: about.qmd
+    right:
+      - text: "Home"
+        href: "https://aydins-workbench.com"
+      - text: "Blog"
+        href: "https://blog.aydins-workbench.com"
+      - text: "GAMLSS Playground"
+        href: "https://gamlss.aydins-workbench.com"
+      - text: "gamlss.longitudinal"
+        href: "https://gamlsslongitudinal.aydins-workbench.com"
+      - icon: github
+        href: "https://github.com/ahibbert"
+      - icon: rss
+        href: index.xml
+  page-footer:
+    left: "Part of Aydin's Workbench."
+    right:
+      - text: "Back to top"
+        href: "#top"
+  reader-mode: true
+  search: true
+  open-graph: true
+  twitter-card: true
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    code-fold: true
+    code-tools: true
+    fig-align: center
+
+execute:
+  freeze: auto
+  warning: false
+  message: false

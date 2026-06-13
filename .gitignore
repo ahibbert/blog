@@ -1,2 +1,8 @@
 .DS_Store
 Thumbs.db
+/.quarto/
+/_site/
+/_freeze/
+/posts/**/data/
+
+**/*.quarto_ipynb

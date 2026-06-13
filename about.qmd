@@ -1,0 +1,16 @@
+---
+title: "About"
+---
+
+This blog is part of Aydin's Workbench: a public notebook for statistical modelling, research software, public data questions, and project-adjacent writing.
+
+The Australian Data Review posts have been folded into this site so data analysis notes sit beside the broader modelling and software work instead of living on a separate island.
+
+The working style:
+
+- Start with a concrete question.
+- Use public or clearly documented data.
+- Show the method.
+- Prefer one strong chart over ten decorative ones.
+- Separate what the data says from what it cannot say.
+- Keep caveats visible while drafts are still moving.

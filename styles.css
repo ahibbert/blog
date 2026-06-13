@@ -95,6 +95,7 @@ a {
 
 .nav-links a,
 .button {
+  max-width: 100%;
   min-height: 2.25rem;
   display: inline-flex;
   align-items: center;
@@ -106,7 +107,27 @@ a {
   text-decoration: none;
   font-weight: 680;
   font-size: 0.9rem;
+  text-align: center;
   transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.nav-links a:nth-child(1) {
+  padding-inline: 0.8rem;
+}
+
+.nav-links a:nth-child(2) {
+  min-height: 2.55rem;
+  padding-inline: 0.9rem;
+}
+
+.nav-links a:nth-child(3) {
+  min-height: 2.35rem;
+  padding-inline: 1.05rem;
+}
+
+.nav-links a:nth-child(4) {
+  min-height: 2.75rem;
+  padding-inline: 1rem;
 }
 
 .nav-links a:hover,

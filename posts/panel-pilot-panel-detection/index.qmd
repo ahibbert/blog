@@ -172,6 +172,34 @@ The most useful test artifact was an overlay/contact sheet: render the page, dra
 
 We also added a "report bad panels" button in the app. That saves the current page, selected region and detector metadata so future failures can be reviewed directly instead of reconstructed from memory.
 
+## Visual Examples From The Test Set
+
+These are small annotated excerpts from the detector test runs, not full-resolution reading assets. The colored boxes are the regions Panel Pilot would zoom into, and the small black labels show the reading order.
+
+### Manga: Chainsaw Man
+
+Chainsaw Man was useful for manga mode because it has many conventional rectangular pages, but it also makes reading order easy to inspect. In the example below, the top row is read right-to-left: region 1 on the upper right, region 2 below it, then region 3 and 4 on the left. After that, the reader moves down the page.
+
+![Chainsaw Man manga-mode detector overlay showing right-to-left reading order across rectangular panels.](assets/chainsaw-manga-rtl-order.jpg){fig-alt="A low-resolution Chainsaw Man page excerpt with colored panel boxes and numbered reading-order labels." width="420"}
+
+This is the case where manga mode should feel almost invisible. The detector is not trying to understand the story; it is finding plausible panel regions, grouping them into rows, and then applying RTL ordering inside each row. The important behavior is that the reader rarely moves rightward inside a row.
+
+### Webtoon: Solo Leveling
+
+Solo Leveling pushed the webtoon path in a different direction. The source gives the chapter as multiple image files, but the reader has to treat those files as one continuous vertical strip. A fixed screen-height scroll would land halfway through faces, speech bubbles and scene transitions.
+
+![Solo Leveling webtoon-mode detector slices from one continuous vertical strip.](assets/solo-leveling-webtoon-slices.jpg){fig-alt="Three low-resolution Solo Leveling strip excerpts side by side, each showing vertical webtoon slices separated by red detector boundaries." width="680"}
+
+The webtoon method keeps the strip width fixed, then chooses vertical slices from quiet and active row analysis. The regions can overlap. That is deliberate: for a long vertical comic, overlapping slices are usually better than cutting a speech bubble or character beat in half.
+
+### Comic Beta: Darth Vader (2020)
+
+Darth Vader (2020) chapter 33 is a good stress test for western comics because the page design is doing a lot: diagonal motion, inset panels, large sound effects, captions and overlapping focal regions. A manga-style "find neat rectangles" pass is not enough.
+
+![Darth Vader 2020 comic-beta detector overlay showing overlapping focus regions on a dynamic western comic page.](assets/darth-vader-comic-beta.jpg){fig-alt="A low-resolution Darth Vader 2020 page excerpt with colored overlapping focus regions and numbered labels." width="420"}
+
+This is why the comic beta became a readable-region selector rather than a pure panel detector. Some boxes overlap, and some are aimed at text or visual focus rather than strict bordered panels. It is still the least polished mode, but the objective is different: choose zoom targets where the reader can actually read the words and follow the page flow on a phone.
+
 ## What We Landed On
 
 The current prototype uses three modes:
@@ -187,4 +215,3 @@ The most important design choice was to stop treating panel detection as a singl
 The next big step is probably better text awareness: not full OCR for transcription, but enough detection to know whether a speech bubble or caption is fully readable inside at least one region. That would give the detector a more reader-centered objective than "did we find the panel border?"
 
 For now, the working rule is simple: a panel selection method is good if the next tap feels obvious, the words are readable, and the reader does not have to think about the detector.
-

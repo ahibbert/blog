@@ -142,11 +142,16 @@ a:hover {
 }
 
 .navbar .navbar-nav.ms-auto .nav-link:nth-child(4) {
+  min-height: 2.45rem;
+  padding-inline: 1rem;
+}
+
+.navbar .navbar-nav.ms-auto .nav-link:nth-child(5) {
   min-height: 2.75rem;
   padding-inline: 1rem;
 }
 
-.navbar .navbar-nav.ms-auto .nav-link:nth-child(n + 5) {
+.navbar .navbar-nav.ms-auto .nav-link:nth-child(n + 6) {
   width: 2.25rem;
   padding-inline: 0;
 }
@@ -631,7 +636,8 @@ pre,
 
   .navbar .navbar-nav.ms-auto .nav-link:nth-child(2),
   .navbar .navbar-nav.ms-auto .nav-link:nth-child(3),
-  .navbar .navbar-nav.ms-auto .nav-link:nth-child(4) {
+  .navbar .navbar-nav.ms-auto .nav-link:nth-child(4),
+  .navbar .navbar-nav.ms-auto .nav-link:nth-child(5) {
     min-height: 2.35rem;
   }
 

@@ -24,6 +24,8 @@ website:
         href: "https://blog.aydins-workbench.com"
       - text: "GAMLSS Playground"
         href: "https://gamlss.aydins-workbench.com"
+      - text: "Longitudinal Explorer"
+        href: "https://gamlss.aydins-workbench.com/longitudinal/"
       - text: "gamlss.longitudinal"
         href: "https://gamlsslongitudinal.aydins-workbench.com"
       - icon: github

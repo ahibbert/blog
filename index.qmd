@@ -14,12 +14,12 @@ listing:
 ```{=html}
 <section class="hero section-band" aria-labelledby="intro-title">
   <div class="hero-copy">
-    <p class="eyebrow">Blog / notes / data questions</p>
+    <p class="eyebrow">Public-interest data / models / software</p>
     <h1 id="intro-title">Writing from the workbench.</h1>
     <p class="intro">
       Notes that are too developed to stay in a scratch file and too alive to pretend
-      they are finished. Expect statistical modelling, public data analysis, research
-      software, workflow, and the occasional public attempt to think clearly.
+      they are finished. Expect statistical modelling, public-interest and public-health
+      data, research software, workflow, and the occasional attempt to think clearly in public.
     </p>
     <div class="hero-actions" aria-label="Primary links">
       <a class="button primary" href="#posts">Browse posts</a>

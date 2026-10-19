@@ -165,6 +165,25 @@ body:has(.hero) #quarto-document-content {
   grid-column: screen-start / screen-end;
 }
 
+body:has(.hero) .hero,
+body:has(.hero) .updates-band,
+body:has(.hero) #post-listing {
+  width: min(100%, 1080px);
+  margin-inline: auto;
+}
+
+.page-layout-article main.content {
+  width: 100%;
+  max-width: 780px;
+  margin-inline: auto;
+}
+
+.page-layout-article .quarto-title h1.title {
+  max-width: 18ch;
+  font-size: clamp(2.3rem, 5vw, 4.2rem);
+  line-height: 1;
+}
+
 .quarto-title-block.default .quarto-title .title {
   color: var(--ink);
 }

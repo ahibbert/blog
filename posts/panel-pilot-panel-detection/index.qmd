@@ -4,6 +4,7 @@ description: "A build note on the panel-detection methods tested for Panel Pilot
 date: "2026-06-16"
 categories: [software, computer-vision, reading, tools]
 author: "Aydin"
+draft: true
 ---
 
 Panel-by-panel reading sounds like it should be simple. Find the boxes, zoom into the boxes, move to the next box.

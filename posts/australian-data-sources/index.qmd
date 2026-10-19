@@ -4,6 +4,7 @@ description: "A casual starting point for the site: what this is for, useful Aus
 date: "2026-05-26"
 categories: [data, australia, health, policy, methods]
 author: "Aydin"
+draft: true
 ---
 
 This site is basically a place to ask public policy questions and see whether public data can give us better context, maybe even the occasional answer.

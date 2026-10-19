@@ -1,60 +1,54 @@
 ---
-title: "Did the 1 November 2025 Bulk Billing Changes Shift Access?"
-description: "An early reproducible look at whether expanded GP bulk billing incentives changed access patterns by age, socioeconomic area, geography and PHN."
+title: "Bulk Billing Rose After November 2025. Did GP Access Improve?"
+description: "Billing changed sharply after the November 2025 GP incentives, especially for working-age adults. The evidence for more care is much weaker."
 date: "2026-05-28"
+date-modified: "2026-10-20"
 categories: [medicare, bulk-billing, health-policy, australia]
 author: "Aydin"
 ---
-
-The 1 November 2025 bulk billing changes were designed to make it easier for general practices to bulk bill more patients. The narrowest measurable question is whether the share of GP attendances that were bulk billed moved after the change. The broader access question is harder: a higher bulk billing rate is not the same thing as more appointments, shorter waits or less delayed care.
-
-This post treats access as two linked signals:
-
-1. the GP bulk billing rate, which is the main outcome;
-2. service-use and payment checks, so we do not confuse a billing-mix change with an access change.
-
-The analysis is deliberately framed as an early signal. The policy began on 1 November 2025, the AIHW dashboard is updated quarterly, and AIHW treats the last 3 months of data as preliminary.
 
 ```{r}
 #| label: setup
 #| include: false
 
-library(readr)
 library(readxl)
+library(readr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(stringr)
 library(lubridate)
-library(purrr)
-library(forcats)
-library(broom)
 library(scales)
 library(knitr)
 
-theme_set(theme_minimal(base_size = 12))
+source(file.path("..", "..", "R", "data_sources.R"))
 
-raw_dir <- file.path("data-raw")
-dir.create(raw_dir, recursive = TRUE, showWarnings = FALSE)
+theme_set(
+  theme_minimal(base_size = 12) +
+    theme(
+      plot.title.position = "plot",
+      plot.caption.position = "plot",
+      panel.grid.minor = element_blank()
+    )
+)
 
 policy_date <- as.Date("2025-11-01")
-pre_start <- as.Date("2025-05-01")
-pre_end <- as.Date("2025-10-01")
-transition_quarter_date <- as.Date("2025-12-01")
-clean_post_quarter_date <- as.Date("2026-03-01")
-visit_model_start_quarter_date <- as.Date("2023-09-01")
+latest_expected_month <- as.Date("2026-06-01")
+latest_expected_quarter <- as.Date("2026-06-01")
 
-source_urls <- list(
-  aihw_data = "https://www.aihw.gov.au/reports/medicare/medicare-bulk-billing-gp-attendances-monthly-data/data",
-  aihw_notes = "https://www.aihw.gov.au/reports/medicare/medicare-bulk-billing-gp-attendances-monthly-data/contents/technical-notes",
-  mbs_changes = "https://www.mbsonline.gov.au/internet/mbsonline/publishing.nsf/Content/Factsheet-Bulk%2BBilling%2BIncentives%2B%E2%80%93%2BChanges%2Bto%2BEligibility",
-  phn_quarterly = "https://www.health.gov.au/sites/default/files/2026-05/medicare-quarterly-statistics-bulk-billing-by-primary-health-network-march-quarter-2025-26.xlsx",
-  sa3_quarterly = "https://www.health.gov.au/sites/default/files/2026-05/medicare-quarterly-statistics-statistical-area-sa3-summary-march-quarter-2025-26.xlsx",
-  mmm_quarterly = "https://www.health.gov.au/sites/default/files/2026-05/medicare-quarterly-statistics-modified-monash-model-locations-march-quarter-2025-26.xlsx",
-  primary_care_service_type = "https://www.health.gov.au/sites/default/files/2026-05/medicare-quarterly-statistics-primary-care-service-type-summary-march-quarter-2025-26.xlsx",
-  phn_lga = "https://www.health.gov.au/sites/default/files/2024-03/primary-health-networks-phn-2023-local-government-areas-2021.xlsx",
-  mmm_feature = "https://services5.arcgis.com/OvOcYIrJnM97ABBA/ArcGIS/rest/services/Modified_Monash_Model_2019/FeatureServer/0"
+raw_dir <- "data-raw"
+source_registry <- read_source_registry("sources.csv")
+source_files <- lapply(
+  seq_len(nrow(source_registry)),
+  function(index) download_registered_source(source_registry[index, , drop = FALSE], raw_dir)
 )
+source_manifest <- write_source_manifest(source_files, file.path(raw_dir, "source-manifest.csv"))
+
+source_path <- function(source_id) {
+  index <- match(source_id, source_registry$source_id)
+  if (is.na(index)) stop("Missing source in sources.csv: ", source_id, call. = FALSE)
+  source_files[[index]]$path
+}
 
 clean_names <- function(x) {
   x |>
@@ -64,1099 +58,834 @@ clean_names <- function(x) {
     str_replace_all("^_|_$", "")
 }
 
-clean_df <- function(x) {
-  names(x) <- clean_names(names(x))
-  x
-}
-
-first_col <- function(data, pattern, required = TRUE) {
-  hit <- names(data)[str_detect(names(data), regex(pattern, ignore_case = TRUE))]
-  if (length(hit) == 0) {
-    if (required) stop("Could not find column matching: ", pattern)
-    return(NA_character_)
-  }
-  hit[[1]]
-}
-
-as_number <- function(x) {
-  if (is.numeric(x)) return(x)
-  parse_number(as.character(x), na = c("", "NA", "n/a", "-", "%null%"))
-}
-
-safe_mean <- function(x) {
-  x <- x[is.finite(x)]
-  if (length(x) == 0) return(NA_real_)
-  mean(x)
-}
-
-safe_lm_slope <- function(data) {
-  if (nrow(data) < 6 || n_distinct(data$service_month) < 6) return(NA_real_)
-  tidy(lm(bulk_billing_rate ~ month_index, data = data)) |>
-    filter(term == "month_index") |>
-    pull(estimate)
+assert_true <- function(condition, message) {
+  if (!isTRUE(condition)) stop(message, call. = FALSE)
 }
 
 quarter_to_date <- function(x) {
-  fy_start <- as.integer(str_extract(x, "^\\d{4}"))
+  financial_year_start <- as.integer(str_sub(x, 1, 4))
   quarter <- as.integer(str_match(x, "Q([1-4])")[, 2])
-  month <- case_when(
-    quarter == 1 ~ 9L,
-    quarter == 2 ~ 12L,
-    quarter == 3 ~ 3L,
-    quarter == 4 ~ 6L,
-    TRUE ~ NA_integer_
-  )
-  year <- if_else(quarter %in% c(1L, 2L), fy_start, fy_start + 1L)
+  month <- c(9L, 12L, 3L, 6L)[quarter]
+  year <- if_else(quarter <= 2L, financial_year_start, financial_year_start + 1L)
   as.Date(sprintf("%04d-%02d-01", year, month))
 }
 
-weighted_rate <- function(numerator, denominator) {
-  total_denominator <- sum(denominator, na.rm = TRUE)
-  if (!is.finite(total_denominator) || total_denominator == 0) return(NA_real_)
-  sum(numerator, na.rm = TRUE) / total_denominator
-}
-
-format_model_estimate <- function(estimate, outcome_type) {
-  case_when(
-    outcome_type == "log" ~ percent(exp(estimate) - 1, accuracy = 0.1),
-    outcome_type == "rate" ~ percent(estimate, accuracy = 0.01),
-    outcome_type == "dollar" ~ dollar(estimate, accuracy = 0.01),
-    TRUE ~ as.character(round(estimate, 3))
-  )
-}
-
-download_if_missing <- function(url, path) {
-  if (!file.exists(path)) {
-    ok <- tryCatch({
-      download.file(url, path, mode = "wb", quiet = TRUE, timeout = 180)
-      TRUE
-    }, error = function(e) FALSE)
-
-    if (!ok && nzchar(Sys.which("curl"))) {
-      status <- system2(
-        "curl",
-        c("-L", "--fail", "--retry", "3", "--connect-timeout", "20", "--max-time", "180", "-o", shQuote(path), shQuote(url)),
-        stdout = TRUE,
-        stderr = TRUE
-      )
-      ok <- file.exists(path)
-      if (!ok) warning(paste(status, collapse = "\n"))
-    }
-
-    if (!ok) stop("Could not download source file: ", url)
-  }
-  path
-}
-
-ensure_aihw_tableau <- function(refresh = FALSE) {
-  expected <- file.path(
-    raw_dir,
-    paste0(
-      "aihw_tableau_",
-      c("national", "age", "seifa", "benefits", "latest_lga_map"),
-      ".csv"
-    )
+parse_aihw_table <- function(path, sheet, id_names) {
+  raw <- read_excel(path, sheet = sheet, col_names = FALSE, .name_repair = "minimal")
+  assert_true(ncol(raw) > 500, "The AIHW workbook has fewer month columns than expected.")
+  assert_true(
+    identical(as.character(unlist(raw[2, seq_along(id_names)])), id_names),
+    paste0("The AIHW ", sheet, " header has changed; review the parser.")
   )
 
-  if (refresh || any(!file.exists(expected))) {
-    script <- if (file.exists("tableau_export.py")) {
-      "tableau_export.py"
-    } else {
-      file.path("posts", "bulk-billing-changes-impact", "tableau_export.py")
-    }
-    if (!file.exists(script)) stop("Missing Tableau extractor: ", script)
-    python_cmd <- if (.Platform$OS.type == "windows") "py" else "python3"
-    python_args <- if (.Platform$OS.type == "windows") {
-      c("-3", shQuote(script), "--out-dir", shQuote(normalizePath(raw_dir, winslash = "/")))
-    } else {
-      c(shQuote(script), "--out-dir", shQuote(normalizePath(raw_dir, winslash = "/")))
-    }
-    status <- system2(
-      python_cmd,
-      python_args,
-      stdout = TRUE,
-      stderr = TRUE
-    )
-    if (!all(file.exists(expected))) {
-      stop("AIHW Tableau extraction did not create all expected files:\n", paste(status, collapse = "\n"))
-    }
-  }
+  first_month_column <- length(id_names) + 1L
+  month_dates <- as.Date(
+    suppressWarnings(as.numeric(as.character(unlist(raw[2, first_month_column:ncol(raw)])))),
+    origin = "1899-12-30"
+  )
+  assert_true(!anyNA(month_dates) && !anyDuplicated(month_dates), "AIHW month headers are invalid or duplicated.")
 
-  invisible(expected)
+  body <- raw[-c(1, 2), ]
+  names(body) <- c(clean_names(id_names), as.character(month_dates))
+  body |>
+    mutate(across(first_month_column:ncol(body), as.character)) |>
+    pivot_longer(first_month_column:ncol(body), names_to = "month", values_to = "value") |>
+    mutate(month = as.Date(month), value = suppressWarnings(as.numeric(value)))
 }
 
-read_tableau <- function(label) {
-  read_csv(file.path(raw_dir, paste0("aihw_tableau_", label, ".csv")), show_col_types = FALSE) |>
-    clean_df()
+parse_aihw_table_1 <- function(path) {
+  parse_aihw_table(path, "Table 1", c("Demography", "Demography value", "Metric")) |>
+    rename(group = demography_value)
 }
 
-standardise_rate_sheet <- function(data, dimension_col = NULL, dimension_name = "All") {
-  value_col <- first_col(data, "^sum_pivot_field_values_value$")
-  month_col <- first_col(data, "^month_service_month_value$")
-  state_col <- first_col(data, "^attr_state1_alias$", required = FALSE)
-  type_col <- first_col(data, "^type_alias$", required = FALSE)
+parse_aihw_table_2 <- function(path) {
+  parse_aihw_table(path, "Table 2", c("State", "Demography", "Demography value", "Metric")) |>
+    rename(group = demography_value)
+}
 
-  out <- data |>
+parse_sa3_quarterly <- function(path) {
+  data <- read_excel(path, sheet = "GP NRA by SA3", skip = 4)
+  names(data) <- make.unique(clean_names(names(data)))
+  required <- c(
+    "quarter", "state", "sa3", "broad_type_of_service", "services",
+    "bulk_billed_services", "patient_billed_services", "mbs_bulk_billing_rate",
+    "patient_billed_benefits", "patient_billed_fee_charged"
+  )
+  assert_true(all(required %in% names(data)), "The Department SA3 workbook columns have changed.")
+
+  data |>
     transmute(
-      service_month = as.Date(.data[[month_col]]),
-      state = if (!is.na(state_col)) .data[[state_col]] else "Australia",
-      dimension = dimension_name,
-      group = if (is.null(dimension_col)) "All patients" else as.character(.data[[dimension_col]]),
-      type = if (!is.na(type_col)) .data[[type_col]] else "Total",
-      bulk_billing_rate = as.numeric(.data[[value_col]])
-    ) |>
-    filter(!is.na(service_month), type == "Total", is.finite(bulk_billing_rate)) |>
-    distinct()
-
-  out
-}
-
-extract_latest <- function(data, value_col = "bulk_billing_rate") {
-  data |>
-    filter(service_month == max(service_month, na.rm = TRUE)) |>
-    arrange(desc(.data[[value_col]]))
-}
-
-window_compare <- function(data) {
-  data |>
-    mutate(window = case_when(
-      service_month >= pre_start & service_month <= pre_end ~ "May-Oct 2025",
-      service_month >= policy_date ~ "Nov 2025 onward",
-      TRUE ~ NA_character_
-    )) |>
-    filter(!is.na(window)) |>
-    group_by(dimension, group, window) |>
-    summarise(rate = safe_mean(bulk_billing_rate), months = n_distinct(service_month), .groups = "drop") |>
-    pivot_wider(names_from = window, values_from = c(rate, months)) |>
-    mutate(change = `rate_Nov 2025 onward` - `rate_May-Oct 2025`) |>
-    arrange(desc(abs(change)))
-}
-```
-
-```{r}
-#| label: load-data
-
-ensure_aihw_tableau(refresh = FALSE)
-
-manifest <- read_csv(file.path(raw_dir, "aihw_tableau_manifest.csv"), show_col_types = FALSE)
-
-national <- read_tableau("national") |>
-  standardise_rate_sheet() |>
-  mutate(month_index = as.integer(interval(min(service_month), service_month) %/% months(1)))
-
-age_rates <- read_tableau("age") |>
-  standardise_rate_sheet("age_group_series_alias", "Age group") |>
-  mutate(group = str_replace(group, " - ", "-"))
-
-seifa_rates <- read_tableau("seifa") |>
-  standardise_rate_sheet("seifa_series_alias", "Socioeconomic quintile")
-
-benefits_raw <- read_tableau("benefits")
-benefits <- benefits_raw |>
-  transmute(
-    service_month = as.Date(.data[[first_col(benefits_raw, "^month_service_month_value$")]]),
-    series = .data[[first_col(benefits_raw, "^chart_4_series_alias$")]],
-    value = as.numeric(.data[[first_col(benefits_raw, "^sum_pivot_field_values_value$")]])
-  ) |>
-  filter(!is.na(service_month), is.finite(value), !is.na(series)) |>
-  distinct()
-
-lga_latest <- read_tableau("latest_lga_map") |>
-  transmute(
-    state = state1_alias,
-    lga_code = as.integer(lga_code21_alias),
-    lga_name = attr_lga_name_alias,
-    latest_bulk_billing_rate = as_number(sum_pivot_field_values_copy_alias),
-    remoteness_area = attr_main_ra_alias,
-    seifa_quintile = as.integer(attr_main_seifa_alias)
-  ) |>
-  filter(is.finite(latest_bulk_billing_rate), !is.na(lga_code))
-
-phn_path <- download_if_missing(source_urls$phn_quarterly, file.path(raw_dir, "phn_bulk_billing.xlsx"))
-sa3_path <- download_if_missing(source_urls$sa3_quarterly, file.path(raw_dir, "sa3_quarterly.xlsx"))
-mmm_path <- download_if_missing(source_urls$mmm_quarterly, file.path(raw_dir, "mmm_quarterly.xlsx"))
-pcst_path <- download_if_missing(source_urls$primary_care_service_type, file.path(raw_dir, "primary_care_service_type.xlsx"))
-phn_lga_path <- download_if_missing(source_urls$phn_lga, file.path(raw_dir, "phn_lga_concordance.xlsx"))
-
-phn_quarterly <- read_excel(phn_path, sheet = "By BTOS and PHN", skip = 4) |>
-  clean_df() |>
-  transmute(
-    state,
-    phn = primary_health_network,
-    quarter,
-    service_type = broad_type_of_service,
-    phn_bulk_billing_rate = as.numeric(mbs_bulk_billing_rate)
-  ) |>
-  filter(service_type == "Total GP Non-Referred Attendances", !is.na(phn_bulk_billing_rate))
-
-phn_age <- read_excel(phn_path, sheet = "GP NRA by PHN and Age Group", skip = 4) |>
-  clean_df() |>
-  select(state, phn = primary_health_network, quarter, contains("bulk_billing_rate")) |>
-  pivot_longer(contains("bulk_billing_rate"), names_to = "age_group", values_to = "bulk_billing_rate") |>
-  mutate(
-    age_group = case_when(
-      str_detect(age_group, "under_16") ~ "0-15",
-      str_detect(age_group, "16_to_64") ~ "16-64",
-      str_detect(age_group, "65") ~ "65+",
-      str_detect(age_group, "all_ages") ~ "All ages",
-      TRUE ~ age_group
-    ),
-    bulk_billing_rate = as.numeric(bulk_billing_rate)
-  ) |>
-  filter(!is.na(bulk_billing_rate))
-
-sa3_visits_raw <- read_excel(sa3_path, sheet = "GP NRA by SA3", skip = 4) |>
-  clean_df()
-
-sa3_visits <- sa3_visits_raw |>
-  transmute(
-    state,
-    sa3 = sa3,
-    quarter,
-    quarter_date = quarter_to_date(quarter),
-    service_type = broad_type_of_service,
-    services = as.numeric(services),
-    benefits = as.numeric(benefits),
-    bulk_billed_services = as.numeric(bulk_billed_services),
-    patient_billed_services = as.numeric(patient_billed_services),
-    bulk_billing_rate = as.numeric(mbs_bulk_billing_rate),
-    avg_patient_contribution_patient_billed = as.numeric(avg_patient_contribution_per_service_out_of_hospital_patient_billed),
-    avg_patient_contribution_total = as.numeric(avg_patient_contribution_per_service_out_of_hospital_total)
-  ) |>
-  filter(
-    service_type == "Total GP Non-Referred Attendances",
-    !is.na(quarter_date),
-    is.finite(services),
-    services > 0,
-    !sa3 %in% c("Australia", state),
-    !str_detect(state, regex("unknown|other territories", ignore_case = TRUE)),
-    !str_detect(sa3, regex("^unknown|unknown state", ignore_case = TRUE))
-  ) |>
-  mutate(
-    sa3_key = paste(state, sa3, sep = " - "),
-    quarter_status = case_when(
-      quarter_date < transition_quarter_date ~ "Pre-policy",
-      quarter_date == transition_quarter_date ~ "Transition quarter",
-      quarter_date >= clean_post_quarter_date ~ "Clean post-policy",
-      TRUE ~ NA_character_
+      quarter,
+      quarter_date = quarter_to_date(quarter),
+      state,
+      sa3,
+      sa3_id = paste(state, sa3, sep = " / "),
+      service_type = broad_type_of_service,
+      services = as.numeric(services),
+      bulk_billed_services = as.numeric(bulk_billed_services),
+      patient_billed_services = as.numeric(patient_billed_services),
+      bulk_billing_rate = as.numeric(mbs_bulk_billing_rate),
+      patient_billed_benefits = as.numeric(patient_billed_benefits),
+      patient_billed_fee_charged = as.numeric(patient_billed_fee_charged),
+      patient_contributions = patient_billed_fee_charged - patient_billed_benefits
     )
-  )
+}
 
-sa3_exposure <- sa3_visits |>
-  filter(
-    quarter_date >= max(quarter_date[quarter_date < transition_quarter_date], na.rm = TRUE) %m-% months(9),
-    quarter_date < transition_quarter_date
-  ) |>
-  group_by(sa3_key) |>
-  summarise(
-    baseline_quarters = n_distinct(quarter_date),
-    baseline_services = mean(services, na.rm = TRUE),
-    pre_policy_bulk_billing_rate = weighted_rate(bulk_billed_services, services),
-    pre_policy_patient_contribution = weighted.mean(
-      avg_patient_contribution_patient_billed,
-      w = patient_billed_services,
-      na.rm = TRUE
-    ),
-    .groups = "drop"
-  ) |>
-  mutate(
-    pre_policy_non_bulk_billed_share = 1 - pre_policy_bulk_billing_rate,
-    pre_policy_gap_10pp = pre_policy_non_bulk_billed_share / 0.1
-  )
+# Bartlett-kernel HAC covariance for the short monthly interrupted time series.
+vcov_hac <- function(model, lag = NULL) {
+  design <- model.matrix(model)
+  errors <- residuals(model)
+  observations <- nrow(design)
+  parameters <- ncol(design)
+  if (is.null(lag)) lag <- floor(4 * (observations / 100)^(2 / 9))
+  meat <- crossprod(design * errors)
 
-sa3_panel <- sa3_visits |>
-  left_join(sa3_exposure, by = "sa3_key") |>
-  mutate(
-    log_services = log1p(services),
-    clean_post_policy = quarter_date >= clean_post_quarter_date,
-    exposure_band = cut(
-      pre_policy_non_bulk_billed_share,
-      breaks = quantile(pre_policy_non_bulk_billed_share, probs = c(0, 1 / 3, 2 / 3, 1), na.rm = TRUE),
-      include.lowest = TRUE,
-      labels = c("Lower room to move", "Middle", "Higher room to move")
-    ),
-    rate_check = bulk_billed_services / services,
-    rate_difference = bulk_billing_rate - rate_check
-  ) |>
-  filter(
-    is.finite(pre_policy_gap_10pp),
-    is.finite(baseline_services),
-    baseline_quarters == 4
-  )
-
-mmm_visits <- read_excel(mmm_path, sheet = "All Services", skip = 4) |>
-  clean_df() |>
-  transmute(
-    modified_monash = modified_monash_group,
-    quarter,
-    quarter_date = quarter_to_date(quarter),
-    service_type = broad_type_of_service,
-    services = as.numeric(services),
-    bulk_billed_services = as.numeric(bulk_billed_services),
-    patient_billed_services = as.numeric(patient_billed_services),
-    bulk_billing_rate = as.numeric(mbs_bulk_billing_rate)
-  ) |>
-  filter(
-    service_type == "Total GP Non-Referred Attendances",
-    !is.na(quarter_date),
-    is.finite(services),
-    services > 0,
-    !modified_monash %in% c("Australia")
-  ) |>
-  mutate(
-    quarter_status = case_when(
-      quarter_date < transition_quarter_date ~ "Pre-policy",
-      quarter_date == transition_quarter_date ~ "Transition quarter",
-      quarter_date >= clean_post_quarter_date ~ "Clean post-policy",
-      TRUE ~ NA_character_
+  for (offset in seq_len(lag)) {
+    covariance <- crossprod(
+      design[(offset + 1):observations, , drop = FALSE] * errors[(offset + 1):observations],
+      design[1:(observations - offset), , drop = FALSE] * errors[1:(observations - offset)]
     )
-  )
+    meat <- meat + (1 - offset / (lag + 1)) * (covariance + t(covariance))
+  }
 
-pcst_quarters <- read_excel(pcst_path, sheet = "State", skip = 4) |>
-  clean_df() |>
-  transmute(
-    quarter,
-    quarter_date = quarter_to_date(quarter),
-    service_type = broad_type_of_service,
-    primary_care_service_type,
-    services = as.numeric(services)
+  bread <- solve(crossprod(design))
+  bread %*% meat %*% bread * observations / (observations - parameters)
+}
+
+# One-way cluster-robust covariance, with a finite-sample correction.
+vcov_cluster <- function(model, cluster) {
+  design <- model.matrix(model)
+  errors <- residuals(model)
+  model_weights <- weights(model)
+  if (is.null(model_weights)) model_weights <- rep(1, length(errors))
+  bread <- solve(crossprod(design * sqrt(model_weights)))
+  scores <- design * (model_weights * errors)
+  groups <- split(seq_along(cluster), cluster)
+  meat <- Reduce(`+`, lapply(groups, function(index) {
+    score_sum <- colSums(scores[index, , drop = FALSE])
+    tcrossprod(score_sum)
+  }))
+  observations <- nrow(design)
+  parameters <- ncol(design)
+  group_count <- length(groups)
+  correction <- (group_count / (group_count - 1)) * ((observations - 1) / (observations - parameters))
+  bread %*% meat %*% bread * correction
+}
+
+aihw_path <- source_path("aihw_monthly_bulk_billing")
+aihw <- parse_aihw_table_1(aihw_path)
+aihw_state <- parse_aihw_table_2(aihw_path)
+sa3_raw <- parse_sa3_quarterly(source_path("health_sa3_quarterly"))
+
+national_monthly <- aihw |>
+  filter(
+    demography == "Total",
+    group == "Total",
+    metric == "Bulk-billing rate",
+    month >= as.Date("2023-01-01")
   ) |>
-  filter(!is.na(quarter_date), service_type == "Total GP Non-Referred Attendances")
+  arrange(month) |>
+  rename(bulk_billing_rate = value)
 
-phn_lga <- read_excel(phn_lga_path) |>
-  clean_df() |>
-  transmute(
-    lga_code = as.integer(lga_code_2021),
-    lga_name = lga_name_2021,
-    phn_code = phn_code_2023,
-    phn = phn_name_2023,
-    ratio = as.numeric(ratio_from_to)
-  )
+assert_true(max(national_monthly$month) == latest_expected_month, "The latest AIHW month is not June 2026.")
+assert_true(nrow(national_monthly) == 42, "The recent national AIHW series is not a complete 42-month panel.")
+assert_true(!anyDuplicated(national_monthly$month), "The national AIHW series has duplicate months.")
+assert_true(
+  identical(national_monthly$month, seq(as.Date("2023-01-01"), latest_expected_month, by = "month")),
+  "The national AIHW series has missing months."
+)
+assert_true(all(is.finite(national_monthly$bulk_billing_rate)), "The national AIHW series contains missing or non-finite rates.")
+assert_true(all(between(national_monthly$bulk_billing_rate, 0, 1)), "AIHW rates must lie between zero and one.")
 
-lga_phn_latest <- lga_latest |>
-  left_join(phn_lga, by = "lga_code", suffix = c("", "_phn")) |>
-  group_by(phn) |>
-  summarise(
-    lgas = n_distinct(lga_code),
-    latest_lga_mean_rate = weighted.mean(latest_bulk_billing_rate, w = coalesce(ratio, 1), na.rm = TRUE),
-    .groups = "drop"
+age_rates <- aihw |>
+  filter(
+    demography == "Age group", metric == "Bulk-billing rate",
+    month %in% as.Date(c("2025-06-01", "2026-06-01"))
   ) |>
-  filter(!is.na(phn))
-```
+  select(group, month, bulk_billing_rate = value)
 
-## Source Audit
+seifa_rates <- aihw |>
+  filter(
+    demography == "SEIFA", metric == "Bulk-billing rate",
+    month %in% as.Date(c("2025-06-01", "2026-06-01"))
+  ) |>
+  select(group, month, bulk_billing_rate = value)
 
-The AIHW monthly dashboard is the main source because it is dated by month of service and has the policy date built into the time series. The Department's PHN workbook is added as a quarterly cross-check because it has current PHN and age information, but it is not identical to the AIHW dashboard.
-
-```{r}
-#| label: audit-table
-
-audit <- tibble(
-  source = c(
-    "AIHW Tableau monthly dashboard",
-    "Department quarterly PHN workbook",
-    "Department quarterly SA3 workbook",
-    "Department quarterly MMM workbook",
-    "Department primary care service type workbook",
-    "PHN 2023 to LGA 2021 concordance",
-    "Modified Monash Model 2019 feature service"
-  ),
-  used_for = c(
-    "Monthly national, age, SEIFA, benefits and latest LGA map",
-    "Quarterly PHN and PHN by age cross-check",
-    "Quarterly SA3 GP visit-volume panel",
-    "Quarterly Modified Monash visit-volume cross-check",
-    "Primary care service type source audit",
-    "Approximate latest LGA-to-PHN grouping",
-    "Documented as the correct MMM source; not spatially joined in this render"
-  ),
-  latest_period = c(
-    format(max(national$service_month), "%B %Y"),
-    phn_quarterly$quarter[[1]],
-    sa3_panel |>
-      filter(quarter_date == max(quarter_date, na.rm = TRUE)) |>
-      pull(quarter) |>
-      first(),
-    mmm_visits |>
-      filter(quarter_date == max(quarter_date, na.rm = TRUE)) |>
-      pull(quarter) |>
-      first(),
-    pcst_quarters |>
-      filter(quarter_date == max(quarter_date, na.rm = TRUE)) |>
-      pull(quarter) |>
-      first(),
-    "2021 LGA to 2023 PHN",
-    "2019 MMM polygons"
-  ),
-  caveat = c(
-    "Last 3 months are preliminary and may revise",
-    "Quarterly and processed-date style statistics may differ from AIHW",
-    "December quarter 2025 is a transition quarter, not a clean post-policy period",
-    "Coarser than SA3 but directly reports Modified Monash categories",
-    "Used for source triangulation, not the main model",
-    "Latest LGA means are not attendance-weighted",
-    "A faithful MMM join needs spatial or mesh-block concordance work"
-  )
+assert_true(n_distinct(age_rates$group) == 3 && nrow(age_rates) == 6, "AIHW age data are incomplete.")
+assert_true(n_distinct(seifa_rates$group) == 5 && nrow(seifa_rates) == 10, "AIHW SEIFA data are incomplete.")
+assert_true(
+  all(is.finite(age_rates$bulk_billing_rate)) && all(between(age_rates$bulk_billing_rate, 0, 1)),
+  "AIHW age rates contain missing, non-finite or out-of-range values."
+)
+assert_true(
+  all(is.finite(seifa_rates$bulk_billing_rate)) && all(between(seifa_rates$bulk_billing_rate, 0, 1)),
+  "AIHW SEIFA rates contain missing, non-finite or out-of-range values."
 )
 
-audit |> kable()
-```
+age_change <- age_rates |>
+  mutate(period = paste0("rate_", str_replace_all(as.character(month), "-", "_"))) |>
+  select(-month) |>
+  pivot_wider(names_from = period, values_from = bulk_billing_rate) |>
+  transmute(group, change_pp = 100 * (rate_2026_06_01 - rate_2025_06_01))
 
-```{r}
-#| label: source-manifest
-
-manifest |> kable()
-```
-
-The extract found `r n_distinct(national$service_month)` monthly observations from `r format(min(national$service_month), "%B %Y")` to `r format(max(national$service_month), "%B %Y")`. There are `r sum(national$service_month < policy_date & national$service_month >= pre_start)` months in the immediate pre-window and `r sum(national$service_month >= policy_date)` months after the policy start.
-
-## National Signal
-
-The national monthly rate is the cleanest first test. A one-off step after November is suggestive, but the stronger signal is a step that is larger than the pre-existing trend and is visible in the 3-month average.
-
-```{r}
-#| label: national-before-after
-
-national_summary <- window_compare(national) |>
-  mutate(
-    across(starts_with("rate"), \(x) percent(x, accuracy = 0.1)),
-    change = percent(change, accuracy = 0.1)
+seifa_change <- seifa_rates |>
+  mutate(period = paste0("rate_", str_replace_all(as.character(month), "-", "_"))) |>
+  select(-month) |>
+  pivot_wider(names_from = period, values_from = bulk_billing_rate) |>
+  transmute(
+    group = case_when(
+      str_detect(group, "quintile 1") ~ "Quintile 1 (most disadvantaged)",
+      str_detect(group, "quintile 5") ~ "Quintile 5 (most advantaged)",
+      TRUE ~ str_to_sentence(group)
+    ),
+    june_2025 = rate_2025_06_01,
+    june_2026 = rate_2026_06_01,
+    change_pp = 100 * (rate_2026_06_01 - rate_2025_06_01)
   )
 
-national_summary |> kable()
-```
+age_rate_summary <- age_rates |>
+  mutate(period = paste0("rate_", str_replace_all(as.character(month), "-", "_"))) |>
+  select(-month) |>
+  pivot_wider(names_from = period, values_from = bulk_billing_rate) |>
+  mutate(change_pp = 100 * (rate_2026_06_01 - rate_2025_06_01))
 
-```{r}
-#| label: national-trend
-#| fig-cap: "National GP bulk billing rate, with a 3-month rolling average."
-
-national_plot <- national |>
-  arrange(service_month) |>
-  mutate(
-    rolling_3_month = (bulk_billing_rate + lag(bulk_billing_rate, 1) + lag(bulk_billing_rate, 2)) / 3
+working_age_monthly <- aihw |>
+  filter(
+    demography == "Age group", group == "16-64",
+    metric %in% c("Bulk-billing rate", "Bulk-billed services"),
+    month >= as.Date("2023-01-01")
   ) |>
-  filter(service_month >= as.Date("2023-01-01")) |>
-  pivot_longer(c(bulk_billing_rate, rolling_3_month), names_to = "measure", values_to = "rate")
+  transmute(month, metric = clean_names(metric), value) |>
+  pivot_wider(names_from = metric, values_from = value) |>
+  mutate(visits = bulk_billed_services / bulk_billing_rate) |>
+  arrange(month)
 
-ggplot(national_plot, aes(service_month, rate, colour = measure)) +
-  geom_vline(xintercept = policy_date, linetype = "dashed", colour = "grey40") +
-  geom_line(linewidth = 0.8, na.rm = TRUE) +
-  scale_y_continuous(labels = percent) +
-  scale_colour_manual(
-    values = c(bulk_billing_rate = "#1b6ca8", rolling_3_month = "#c44e52"),
-    labels = c(bulk_billing_rate = "Monthly", rolling_3_month = "Rolling 3 months")
-  ) +
-  labs(x = NULL, y = "Bulk billing rate", colour = NULL)
-```
+assert_true(nrow(working_age_monthly) == 42, "The working-age monthly series is incomplete.")
+assert_true(
+  all(is.finite(working_age_monthly$visits)) && all(working_age_monthly$visits > 0),
+  "Working-age visit counts could not be reconstructed from the published numerator and rate."
+)
 
-```{r}
-#| label: national-event-model
+working_age_rates <- age_rate_summary |>
+  filter(group == "16-64")
 
-model_data <- national |>
-  filter(service_month >= as.Date("2023-01-01")) |>
-  mutate(
-    post = service_month >= policy_date,
-    months_since_policy = pmax(0, as.integer(interval(policy_date, service_month) %/% months(1))),
-    month_index = as.integer(interval(min(service_month), service_month) %/% months(1))
-  )
-
-its_model <- lm(bulk_billing_rate ~ month_index + post + months_since_policy, data = model_data)
-
-tidy(its_model, conf.int = TRUE) |>
-  mutate(
-    estimate = percent(estimate, accuracy = 0.01),
-    conf.low = percent(conf.low, accuracy = 0.01),
-    conf.high = percent(conf.high, accuracy = 0.01)
+state_working_age_rates <- aihw_state |>
+  filter(
+    demography == "Age group", group == "16-64", metric == "Bulk-billing rate",
+    month %in% as.Date(c("2025-06-01", "2026-06-01"))
   ) |>
-  kable()
-```
+  select(state, month, bulk_billing_rate = value) |>
+  mutate(period = paste0("rate_", str_replace_all(as.character(month), "-", "_"))) |>
+  select(-month) |>
+  pivot_wider(names_from = period, values_from = bulk_billing_rate) |>
+  mutate(change_pp = 100 * (rate_2026_06_01 - rate_2025_06_01))
 
-The `postTRUE` coefficient is the immediate step after November 2025, after allowing for a linear pre/post time trend. This is useful as a screening estimate, not as a final causal estimate.
+assert_true(
+  nrow(state_working_age_rates) == 8 && !anyNA(state_working_age_rates),
+  "The state-by-working-age rate comparison is incomplete."
+)
 
-## Who Moved?
-
-The policy should matter most for patients who were not already covered by the old child/concession-heavy incentive structure. In the public AIHW age bands, that makes `16-64` the group to watch.
-
-```{r}
-#| label: age-before-after
-
-age_compare <- window_compare(age_rates) |>
+national_model_data <- national_monthly |>
   mutate(
-    across(starts_with("rate"), \(x) percent(x, accuracy = 0.1)),
-    change = percent(change, accuracy = 0.1)
+    time = row_number(),
+    post = as.integer(month >= policy_date),
+    post_time = if_else(post == 1L, interval(policy_date, month) %/% months(1), 0),
+    calendar_month = factor(month(month))
   )
 
-age_compare |> kable()
-```
-
-```{r}
-#| label: age-trend
-#| fig-cap: "Bulk billing rates by age group."
-
-age_rates |>
-  filter(service_month >= as.Date("2023-01-01")) |>
-  ggplot(aes(service_month, bulk_billing_rate, colour = group)) +
-  geom_vline(xintercept = policy_date, linetype = "dashed", colour = "grey40") +
-  geom_line(linewidth = 0.8) +
-  scale_y_continuous(labels = percent) +
-  labs(x = NULL, y = "Bulk billing rate", colour = "Age group")
-```
-
-```{r}
-#| label: seifa-before-after
-
-seifa_compare <- window_compare(seifa_rates) |>
-  mutate(
-    across(starts_with("rate"), \(x) percent(x, accuracy = 0.1)),
-    change = percent(change, accuracy = 0.1)
-  )
-
-seifa_compare |> kable()
-```
-
-```{r}
-#| label: seifa-trend
-#| fig-cap: "Bulk billing rates by socioeconomic quintile."
-
-seifa_rates |>
-  filter(service_month >= as.Date("2023-01-01")) |>
-  mutate(group = fct_relevel(group, "1 (lowest socioeconomic area)", "2", "3", "4", "5 (highest socioeconomic area)")) |>
-  ggplot(aes(service_month, bulk_billing_rate, colour = group)) +
-  geom_vline(xintercept = policy_date, linetype = "dashed", colour = "grey40") +
-  geom_line(linewidth = 0.8) +
-  scale_y_continuous(labels = percent) +
-  labs(x = NULL, y = "Bulk billing rate", colour = "SEIFA quintile")
-```
-
-## Payment Check
-
-AIHW's benefits measure includes Medicare benefits for bulk billed GP attendances and the matched bulk billing incentive items. It does not include the separate Bulk Billing Practice Incentive Program payments.
-
-```{r}
-#| label: benefits-check
-#| fig-cap: "Bulk billed GP attendance benefits and related bulk billing incentives."
-
-benefits |>
-  filter(service_month >= as.Date("2023-01-01")) |>
-  ggplot(aes(service_month, value, colour = series)) +
-  geom_vline(xintercept = policy_date, linetype = "dashed", colour = "grey40") +
-  geom_line(linewidth = 0.8) +
-  scale_y_continuous(labels = dollar) +
-  labs(x = NULL, y = "Monthly benefit amount", colour = NULL)
-```
-
-```{r}
-#| label: incentive-share
-
-benefit_wide <- benefits |>
-  filter(service_month >= as.Date("2025-05-01")) |>
-  pivot_wider(names_from = series, values_from = value)
-
-if (all(c("Bulk billing incentives", "Total benefit") %in% names(benefit_wide))) {
-  benefit_wide |>
-    transmute(
-      service_month,
-      incentive_share = `Bulk billing incentives` / `Total benefit`
-    ) |>
-    arrange(service_month) |>
-    mutate(incentive_share = percent(incentive_share, accuracy = 0.1)) |>
-    kable()
-} else {
-  tibble(note = "The expected incentive and total benefit series were not both present in the Tableau export.") |>
-    kable()
+fit_national_model <- function(data) {
+  model <- lm(bulk_billing_rate ~ time + post + post_time + calendar_month, data = data)
+  covariance <- vcov_hac(model)
+  tibble(
+    term = names(coef(model)),
+    estimate = unname(coef(model)),
+    std_error = sqrt(diag(covariance))
+  ) |>
+    mutate(lower = estimate - 1.96 * std_error, upper = estimate + 1.96 * std_error)
 }
-```
 
-## Geography
+national_model <- fit_national_model(national_model_data)
+step_estimate <- filter(national_model, term == "post")
+latest_rate <- filter(national_monthly, month == latest_expected_month) |> pull(bulk_billing_rate)
+june_2025_rate <- filter(national_monthly, month == as.Date("2025-06-01")) |> pull(bulk_billing_rate)
 
-The AIHW dashboard gives a latest-month LGA map. That is not enough for an LGA-level before/after model, but it is enough to see where the current access surface is high or low. The PHN grouping below is an approximate LGA-to-PHN summary of latest LGA rates, not an attendance-weighted PHN statistic.
+working_age_model_data <- working_age_monthly |>
+  mutate(
+    time = row_number(),
+    post = as.integer(month >= policy_date),
+    post_time = if_else(post == 1L, interval(policy_date, month) %/% months(1), 0),
+    calendar_month = factor(month(month))
+  )
 
-```{r}
-#| label: lga-latest-extremes
-
-bind_rows(
-  lga_latest |>
-    arrange(latest_bulk_billing_rate) |>
-    slice_head(n = 10) |>
-    mutate(rank_type = "Lowest latest LGA rates"),
-  lga_latest |>
-    arrange(desc(latest_bulk_billing_rate)) |>
-    slice_head(n = 10) |>
-    mutate(rank_type = "Highest latest LGA rates")
+working_age_visit_model_fit <- lm(
+  log(visits) ~ time + post + post_time + calendar_month,
+  data = working_age_model_data
+)
+working_age_visit_covariance <- vcov_hac(working_age_visit_model_fit)
+working_age_visit_step <- tibble(
+  estimate = coef(working_age_visit_model_fit)[["post"]],
+  std_error = sqrt(working_age_visit_covariance["post", "post"])
 ) |>
-  transmute(
-    rank_type,
-    state,
-    lga_name,
-    remoteness_area,
-    seifa_quintile,
-    latest_bulk_billing_rate = percent(latest_bulk_billing_rate, accuracy = 0.1)
+  mutate(
+    change_percent = 100 * (exp(estimate) - 1),
+    lower_percent = 100 * (exp(estimate - 1.96 * std_error) - 1),
+    upper_percent = 100 * (exp(estimate + 1.96 * std_error) - 1)
+  )
+
+working_age_visit_comparison <- working_age_monthly |>
+  filter(
+    month %in% as.Date(c(
+      "2025-03-01", "2025-04-01", "2025-05-01", "2025-06-01",
+      "2026-03-01", "2026-04-01", "2026-05-01", "2026-06-01"
+    ))
   ) |>
-  kable()
-```
+  mutate(calendar_month = month(month, label = TRUE, abbr = TRUE), year = year(month)) |>
+  select(calendar_month, year, visits) |>
+  pivot_wider(names_from = year, values_from = visits, names_prefix = "visits_") |>
+  mutate(change = visits_2026 / visits_2025 - 1)
 
-```{r}
-#| label: lga-remoteness
-#| fig-cap: "Latest LGA bulk billing rates by AIHW remoteness field."
+working_age_visit_change <- sum(working_age_visit_comparison$visits_2026) /
+  sum(working_age_visit_comparison$visits_2025) - 1
 
-lga_latest |>
-  filter(!is.na(remoteness_area)) |>
-  ggplot(aes(fct_reorder(remoteness_area, latest_bulk_billing_rate, .fun = median, na.rm = TRUE), latest_bulk_billing_rate)) +
-  geom_boxplot(fill = "#d9e8f5", colour = "grey35", outlier.alpha = 0.35) +
-  coord_flip() +
-  scale_y_continuous(labels = percent) +
-  labs(x = NULL, y = "Latest LGA bulk billing rate")
-```
+sa3_numeric <- sa3_raw |>
+  select(
+    services, bulk_billed_services, patient_billed_services, bulk_billing_rate,
+    patient_billed_benefits, patient_billed_fee_charged, patient_contributions
+  )
+assert_true(!anyNA(sa3_raw$quarter_date), "Department quarter labels contain missing or invalid dates.")
+assert_true(
+  !anyNA(sa3_numeric) && all(vapply(sa3_numeric, function(value) all(is.finite(value)), logical(1))),
+  "Department service fields contain missing or non-finite values."
+)
+assert_true(max(sa3_raw$quarter_date) == latest_expected_quarter, "The latest Department quarter is not June 2026.")
+assert_true(all(sa3_raw$services >= 0), "Department service counts must be non-negative.")
+assert_true(all(between(sa3_raw$bulk_billing_rate, 0, 1)), "Department rates must lie between zero and one.")
+assert_true(
+  all(abs(sa3_raw$bulk_billed_services + sa3_raw$patient_billed_services - sa3_raw$services) < 0.01),
+  "Department billed-service components do not add to total services."
+)
+assert_true(
+  all(abs(sa3_raw$bulk_billed_services / sa3_raw$services - sa3_raw$bulk_billing_rate) < 1e-10),
+  "Department published rates do not reconcile to their numerator and denominator."
+)
 
-```{r}
-#| label: phn-lga-latest
-
-lga_phn_latest |>
-  arrange(latest_lga_mean_rate) |>
-  slice_head(n = 15) |>
-  mutate(latest_lga_mean_rate = percent(latest_lga_mean_rate, accuracy = 0.1)) |>
-  kable()
-```
-
-The Modified Monash Model source is available as a polygon feature service, but this render does not force a low-quality LGA-only MMM approximation. A proper MMM join should use a spatial intersection or a finer ABS geography concordance, then aggregate to the patient geography used by the Medicare data.
-
-## PHN Cross-Check
-
-The Department's PHN workbook is quarterly. It is useful as a second view of whether the post-policy shift is visible across PHNs, and whether the working-age pattern appears there too.
-
-```{r}
-#| label: phn-quarterly-summary
-
-phn_quarterly |>
-  filter(phn %in% c("Australia", "NSW", "VIC", "QLD", "SA", "WA", "TAS", "ACT", "NT")) |>
-  arrange(quarter, state, phn) |>
-  tail(20) |>
-  mutate(phn_bulk_billing_rate = percent(phn_bulk_billing_rate, accuracy = 0.1)) |>
-  kable()
-```
-
-```{r}
-#| label: phn-latest
-
-latest_phn_quarter <- phn_quarterly$quarter[[1]]
-
-phn_quarterly |>
-  filter(quarter == latest_phn_quarter, !phn %in% c("Australia", state)) |>
-  arrange(phn_bulk_billing_rate) |>
-  slice_head(n = 15) |>
-  transmute(
-    quarter,
-    state,
-    phn,
-    phn_bulk_billing_rate = percent(phn_bulk_billing_rate, accuracy = 0.1)
-  ) |>
-  kable()
-```
-
-```{r}
-#| label: phn-age-latest
-
-phn_age |>
-  filter(quarter == latest_phn_quarter, phn == "Australia", age_group != "All ages") |>
-  transmute(
-    quarter,
-    age_group,
-    bulk_billing_rate = percent(bulk_billing_rate, accuracy = 0.1)
-  ) |>
-  kable()
-```
-
-## Visit Access
-
-The next test is stricter: did areas with more room for the incentive to shift billing also see more GP attendances? For this, the lowest-level public panel in the current official releases is SA3 by quarter. The December quarter 2025 is mixed, because October was pre-policy and November-December were post-policy, so it is labelled as a transition quarter and excluded from the fixed-effects model.
-
-```{r}
-#| label: visit-access-audit
-
-exposure_baseline_quarters <- sa3_panel |>
-  filter(quarter_date < transition_quarter_date) |>
-  distinct(quarter, quarter_date) |>
-  arrange(desc(quarter_date)) |>
-  slice_head(n = 4) |>
+national_quarterly <- sa3_raw |>
+  filter(state == "Australia", sa3 == "Australia") |>
   arrange(quarter_date)
 
-visit_access_audit <- tibble(
-  metric = c(
-    "Latest SA3 quarter",
-    "Usable pre-policy quarters",
-    "Exposure baseline window",
-    "Transition quarter",
-    "Visit model window starts",
-    "Clean post-policy quarters",
-    "SA3s in model panel",
-    "Rows with missing model fields",
-    "Largest rate validation difference"
-  ),
-  value = c(
-    sa3_panel |>
-      filter(quarter_date == max(quarter_date, na.rm = TRUE)) |>
-      pull(quarter) |>
-      first(),
-    n_distinct(sa3_panel$quarter_date[sa3_panel$quarter_date < transition_quarter_date]),
-    paste(exposure_baseline_quarters$quarter, collapse = " to "),
-    "2025-26 Q2 (Dec Qtr), excluded from the model",
-    sa3_panel |>
-      filter(quarter_date == visit_model_start_quarter_date) |>
-      pull(quarter) |>
-      first(),
-    n_distinct(sa3_panel$quarter_date[sa3_panel$quarter_date >= clean_post_quarter_date]),
-    n_distinct(sa3_panel$sa3_key),
-    sum(!complete.cases(sa3_panel[, c("services", "bulk_billed_services", "bulk_billing_rate", "pre_policy_gap_10pp")])),
-    percent(max(abs(sa3_panel$rate_difference), na.rm = TRUE), accuracy = 0.001)
-  )
-)
-
-visit_access_audit |> kable()
-```
-
-```{r}
-#| label: national-quarterly-visits
-#| fig-cap: "Quarterly GP non-referred attendance services summed across SA3s."
-
-sa3_national_visits <- sa3_panel |>
-  group_by(quarter_date, quarter_status) |>
-  summarise(services = sum(services, na.rm = TRUE), .groups = "drop")
-
-ggplot(sa3_national_visits, aes(quarter_date, services)) +
-  geom_vline(xintercept = transition_quarter_date, linetype = "dotted", colour = "grey45") +
-  geom_vline(xintercept = clean_post_quarter_date, linetype = "dashed", colour = "grey25") +
-  geom_line(colour = "#1b6ca8", linewidth = 0.8) +
-  geom_point(aes(shape = quarter_status), colour = "#1b6ca8", size = 2) +
-  scale_y_continuous(labels = comma) +
-  labs(x = NULL, y = "GP NRA services", shape = NULL)
-```
-
-```{r}
-#| label: sa3-visit-growth
-#| fig-cap: "SA3 visit growth from the pre-policy exposure window to clean post-policy quarters."
-
-sa3_growth <- sa3_panel |>
-  mutate(window = case_when(
-    quarter_date %in% exposure_baseline_quarters$quarter_date ~ "baseline",
-    quarter_date >= clean_post_quarter_date ~ "post",
-    TRUE ~ NA_character_
-  )) |>
-  filter(!is.na(window)) |>
-  group_by(sa3_key, state, sa3, exposure_band, pre_policy_non_bulk_billed_share, baseline_services, window) |>
-  summarise(
-    services = mean(services, na.rm = TRUE),
-    bb_rate = weighted_rate(bulk_billed_services, services),
-    .groups = "drop"
-  ) |>
-  pivot_wider(names_from = window, values_from = c(services, bb_rate)) |>
-  mutate(
-    visit_growth = services_post / services_baseline - 1,
-    bulk_billing_rate_change = bb_rate_post - bb_rate_baseline,
-    exposure_label = as.character(exposure_band)
-  ) |>
-  filter(is.finite(visit_growth), is.finite(pre_policy_non_bulk_billed_share))
-
-ggplot(sa3_growth, aes(visit_growth)) +
-  geom_histogram(bins = 30, fill = "#d9e8f5", colour = "white") +
-  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey35") +
-  scale_x_continuous(labels = percent) +
-  labs(x = "Visit growth", y = "SA3s")
-```
-
-```{r}
-#| label: exposure-band-trends
-#| fig-cap: "Longer-run quarterly GP visit volume indexed to the four-quarter pre-policy exposure window."
-
-band_trends <- sa3_panel |>
-  group_by(exposure_band, quarter_date, quarter_status) |>
-  summarise(services = sum(services, na.rm = TRUE), .groups = "drop") |>
-  group_by(exposure_band) |>
-  mutate(
-    baseline_services = mean(services[quarter_date %in% exposure_baseline_quarters$quarter_date], na.rm = TRUE),
-    visit_index = services / baseline_services
-  ) |>
-  ungroup()
-
-ggplot(band_trends, aes(quarter_date, visit_index, colour = exposure_band)) +
-  geom_vline(xintercept = transition_quarter_date, linetype = "dotted", colour = "grey45") +
-  geom_vline(xintercept = clean_post_quarter_date, linetype = "dashed", colour = "grey25") +
-  geom_line(linewidth = 0.8, na.rm = TRUE) +
-  scale_y_continuous(labels = percent) +
-  labs(x = NULL, y = "Visit volume index", colour = "Pre-policy non-bulk-billed share")
-```
-
-The 2021-22 peak is real in the official service counts, not an indexing artefact. It lines up with the pandemic-era disruption and rebound in GP claiming, so it is a poor baseline for the 2025 policy question. The chart below keeps the same index but starts after that shock; the visit-volume models also use this flatter window.
-
-```{r}
-#| label: exposure-band-trends-flat-window
-#| fig-cap: "Post-spike quarterly GP visit volume indexed to the four-quarter pre-policy exposure window."
-
-band_trends |>
-  filter(quarter_date >= visit_model_start_quarter_date) |>
-  ggplot(aes(quarter_date, visit_index, colour = exposure_band)) +
-  geom_vline(xintercept = transition_quarter_date, linetype = "dotted", colour = "grey45") +
-  geom_vline(xintercept = clean_post_quarter_date, linetype = "dashed", colour = "grey25") +
-  geom_line(linewidth = 0.8, na.rm = TRUE) +
-  scale_y_continuous(labels = percent) +
-  labs(x = NULL, y = "Visit volume index", colour = "Pre-policy non-bulk-billed share")
-```
-
-```{r}
-#| label: exposure-growth-scatter
-#| fig-cap: "Areas with lower pre-policy bulk billing had more room for the incentives to shift billing behaviour."
-
-ggplot(sa3_growth, aes(pre_policy_non_bulk_billed_share, visit_growth)) +
-  geom_hline(yintercept = 0, linetype = "dashed", colour = "grey50") +
-  geom_point(aes(size = baseline_services), alpha = 0.35, colour = "#1b6ca8") +
-  geom_smooth(aes(weight = baseline_services), method = "lm", se = TRUE, colour = "#c44e52") +
-  scale_x_continuous(labels = percent) +
-  scale_y_continuous(labels = percent) +
-  scale_size_continuous(labels = comma, range = c(1, 7)) +
-  labs(
-    x = "Pre-policy non-bulk-billed share",
-    y = "Visit growth",
-    size = "Baseline services"
-  )
-```
-
-```{r}
-#| label: observed-billing-visit-scatter
-#| fig-cap: "Observed SA3 bulk billing rate change versus visit growth."
-
-ggplot(sa3_growth, aes(bulk_billing_rate_change, visit_growth)) +
-  geom_hline(yintercept = 0, linetype = "dashed", colour = "grey50") +
-  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
-  geom_point(aes(size = baseline_services), alpha = 0.35, colour = "#1b6ca8") +
-  geom_smooth(aes(weight = baseline_services), method = "lm", se = TRUE, colour = "#c44e52") +
-  scale_x_continuous(labels = percent) +
-  scale_y_continuous(labels = percent) +
-  scale_size_continuous(labels = comma, range = c(1, 7)) +
-  labs(
-    x = "Observed bulk billing rate change",
-    y = "Visit growth",
-    size = "Baseline services"
-  )
-```
-
-```{r}
-#| label: sa3-access-models
-
-access_model_panel <- sa3_panel |>
+sa3_panel <- sa3_raw |>
   filter(
-    quarter_date >= visit_model_start_quarter_date,
-    quarter_date != transition_quarter_date
-  ) |>
-  mutate(post_x_gap_10pp = as.integer(clean_post_policy) * pre_policy_gap_10pp)
-
-fit_access_model <- function(outcome, label, outcome_type) {
-  model_data <- access_model_panel |>
-    filter(
-      is.finite(.data[[outcome]]),
-      is.finite(post_x_gap_10pp),
-      is.finite(baseline_services),
-      baseline_services > 0
-    )
-
-  model <- lm(
-    reformulate(
-      c("factor(sa3_key)", "factor(quarter_date)", "post_x_gap_10pp"),
-      response = outcome
-    ),
-    data = model_data,
-    weights = baseline_services
+    str_to_upper(state) %in% c("NSW", "VIC", "QLD", "SA", "WA", "TAS", "NT", "ACT"),
+    str_to_upper(sa3) != str_to_upper(state),
+    quarter_date >= as.Date("2023-09-01"), quarter_date <= latest_expected_quarter,
+    services > 0
   )
 
-  tidy(model, conf.int = TRUE) |>
-    filter(term == "post_x_gap_10pp") |>
-    transmute(
-      outcome = label,
-      interpretation = "Clean post-policy change per 10 percentage point higher pre-policy non-bulk-billed share",
-      estimate = format_model_estimate(estimate, outcome_type),
-      conf_low = format_model_estimate(conf.low, outcome_type),
-      conf_high = format_model_estimate(conf.high, outcome_type),
-      rows = nrow(model_data),
-      sa3s = n_distinct(model_data$sa3_key)
-    )
-}
+quarter_counts <- sa3_panel |> count(quarter_date)
+balanced_ids <- sa3_panel |> count(sa3_id) |> filter(n == 12) |> pull(sa3_id)
+assert_true(nrow(quarter_counts) == 12 && n_distinct(quarter_counts$n) == 1, "The SA3 panel is not balanced by quarter.")
+assert_true(length(balanced_ids) == 332, "The expected 332 classified SA3 areas are not present in all 12 quarters.")
 
-access_model_summary <- bind_rows(
-  fit_access_model("log_services", "GP visit volume", "log"),
-  fit_access_model("bulk_billing_rate", "Bulk billing rate", "rate"),
-  fit_access_model("avg_patient_contribution_patient_billed", "Patient contribution among patient-billed services", "dollar")
-)
-
-access_model_summary |> kable()
-```
-
-The first row is the key access test. A positive estimate would mean higher-exposure areas had faster visit-volume growth after the clean post-policy quarter. The second and third rows are mechanism checks: the policy story is stronger if the same high-exposure areas also show larger bulk billing rate gains or lower patient contributions.
-
-```{r}
-#| label: sa3-event-study
-#| fig-cap: "Differential SA3 visit-volume change by pre-policy non-bulk-billed share, relative to September quarter 2025."
-
-reference_quarter <- max(access_model_panel$quarter_date[access_model_panel$quarter_date < transition_quarter_date], na.rm = TRUE)
-
-event_study_data <- access_model_panel |>
-  select(sa3_key, quarter_date, log_services, pre_policy_gap_10pp, baseline_services) |>
-  left_join(
-    access_model_panel |>
-      filter(quarter_date == reference_quarter) |>
-      select(sa3_key, reference_log_services = log_services),
-    by = "sa3_key"
-  ) |>
-  mutate(delta_log_services = log_services - reference_log_services) |>
-  filter(is.finite(delta_log_services), is.finite(pre_policy_gap_10pp), is.finite(baseline_services))
-
-event_study <- event_study_data |>
+sa3_reconciliation <- sa3_panel |>
   group_by(quarter_date) |>
-  group_modify(\(.x, .y) {
-    tidy(
-      lm(delta_log_services ~ pre_policy_gap_10pp, data = .x, weights = baseline_services),
-      conf.int = TRUE
-    ) |>
-      filter(term == "pre_policy_gap_10pp")
-  }) |>
-  ungroup() |>
+  summarise(sa3_services = sum(services), .groups = "drop") |>
+  left_join(national_quarterly |> select(quarter_date, national_services = services), by = "quarter_date") |>
+  mutate(coverage = sa3_services / national_services)
+assert_true(all(sa3_reconciliation$coverage > 0.997), "Classified SA3 services do not closely reconcile to the national total.")
+
+baseline <- sa3_panel |>
+  filter(
+    sa3_id %in% balanced_ids,
+    quarter_date >= as.Date("2024-12-01"), quarter_date <= as.Date("2025-09-01")
+  ) |>
+  group_by(sa3_id) |>
+  summarise(
+    baseline_non_bulk_billed_share = 1 - sum(bulk_billed_services) / sum(services),
+    baseline_services = mean(services), baseline_quarters = n(), .groups = "drop"
+  )
+assert_true(all(baseline$baseline_quarters == 4), "Each SA3 must have four baseline quarters.")
+
+sa3_model_data <- sa3_panel |>
+  filter(sa3_id %in% balanced_ids, quarter_date != as.Date("2025-12-01")) |>
+  inner_join(baseline, by = "sa3_id") |>
   mutate(
-    estimate_pct = exp(estimate) - 1,
-    conf_low_pct = exp(conf.low) - 1,
-    conf_high_pct = exp(conf.high) - 1,
-    quarter_status = case_when(
-      quarter_date < transition_quarter_date ~ "Pre-policy",
-      quarter_date >= clean_post_quarter_date ~ "Clean post-policy",
-      TRUE ~ "Transition quarter"
+    post = as.integer(quarter_date >= as.Date("2026-03-01")),
+    exposure_10pp = baseline_non_bulk_billed_share / 0.10,
+    post_exposure = post * exposure_10pp,
+    log_services = log(services),
+    model_weight = baseline_services / mean(baseline_services)
+  )
+assert_true(
+  nrow(sa3_model_data) == 332 * 11 && sum(sa3_model_data$post) == 332 * 2,
+  "The SA3 model must contain 11 quarters, including two clean post-policy quarters."
+)
+
+fit_sa3_model <- function(data, weighted = FALSE) {
+  model <- if (weighted) {
+    lm(log_services ~ post_exposure + factor(sa3_id) + factor(quarter_date), data = data, weights = model_weight)
+  } else {
+    lm(log_services ~ post_exposure + factor(sa3_id) + factor(quarter_date), data = data)
+  }
+  covariance <- vcov_cluster(model, data$sa3_id)
+  estimate <- coef(model)[["post_exposure"]]
+  std_error <- sqrt(covariance["post_exposure", "post_exposure"])
+  tibble(
+    specification = if_else(weighted, "Baseline-service weighted", "Unweighted (primary)"),
+    estimate, std_error,
+    change_percent = 100 * (exp(estimate) - 1),
+    lower_percent = 100 * (exp(estimate - 1.96 * std_error) - 1),
+    upper_percent = 100 * (exp(estimate + 1.96 * std_error) - 1)
+  )
+}
+
+sa3_models <- bind_rows(
+  fit_sa3_model(sa3_model_data, weighted = FALSE),
+  fit_sa3_model(sa3_model_data, weighted = TRUE)
+)
+
+patient_cost_national <- national_quarterly |>
+  filter(quarter_date %in% as.Date(c("2025-03-01", "2025-06-01", "2026-03-01", "2026-06-01"))) |>
+  mutate(period = if_else(year(quarter_date) == 2025, "Before: Mar + Jun 2025", "After: Mar + Jun 2026")) |>
+  group_by(period) |>
+  summarise(
+    services = sum(services),
+    patient_billed_services = sum(patient_billed_services),
+    patient_contributions = sum(patient_contributions),
+    average_per_service = patient_contributions / services,
+    average_per_patient_billed_service = patient_contributions / patient_billed_services,
+    .groups = "drop"
+  )
+
+patient_cost_change <- patient_cost_national |>
+  summarise(
+    contribution_change = patient_contributions[period == "After: Mar + Jun 2026"] -
+      patient_contributions[period == "Before: Mar + Jun 2025"],
+    average_change = average_per_service[period == "After: Mar + Jun 2026"] -
+      average_per_service[period == "Before: Mar + Jun 2025"],
+    patient_billed_average_change = average_per_patient_billed_service[period == "After: Mar + Jun 2026"] -
+      average_per_patient_billed_service[period == "Before: Mar + Jun 2025"]
+  )
+
+cost_area_groups <- baseline |>
+  transmute(
+    sa3_id,
+    quintile = ntile(1 - baseline_non_bulk_billed_share, 5),
+    group = factor(
+      quintile,
+      levels = 1:5,
+      labels = c(
+        "Q1 - lowest bulk billing", "Q2", "Q3", "Q4", "Q5 - highest bulk billing"
+      )
     )
   )
 
-ggplot(event_study, aes(quarter_date, estimate_pct)) +
-  geom_hline(yintercept = 0, colour = "grey55") +
-  geom_vline(xintercept = transition_quarter_date, linetype = "dotted", colour = "grey45") +
-  geom_vline(xintercept = clean_post_quarter_date, linetype = "dashed", colour = "grey25") +
-  geom_ribbon(aes(ymin = conf_low_pct, ymax = conf_high_pct), fill = "#d9e8f5", alpha = 0.7) +
-  geom_line(colour = "#1b6ca8", linewidth = 0.8) +
-  geom_point(aes(shape = quarter_status), colour = "#1b6ca8", size = 2) +
-  scale_y_continuous(labels = percent) +
+patient_cost_by_area_group <- sa3_panel |>
+  filter(
+    sa3_id %in% balanced_ids,
+    quarter_date %in% as.Date(c("2025-03-01", "2025-06-01", "2026-03-01", "2026-06-01"))
+  ) |>
+  inner_join(cost_area_groups, by = "sa3_id") |>
+  mutate(period = if_else(year(quarter_date) == 2025, "Before", "After")) |>
+  group_by(group, period) |>
+  summarise(
+    services = sum(services),
+    patient_billed_services = sum(patient_billed_services),
+    patient_contributions = sum(patient_contributions),
+    average_per_service = patient_contributions / services,
+    average_per_patient_billed_service = patient_contributions / patient_billed_services,
+    .groups = "drop"
+  ) |>
+  pivot_wider(
+    names_from = period,
+    values_from = c(
+      services, patient_billed_services, patient_contributions,
+      average_per_service, average_per_patient_billed_service
+    )
+  ) |>
+  mutate(
+    average_change = average_per_service_After - average_per_service_Before,
+    patient_billed_average_change =
+      average_per_patient_billed_service_After - average_per_patient_billed_service_Before
+  )
+
+state_patient_costs <- sa3_raw |>
+  filter(
+    str_to_upper(state) %in% c("NSW", "VIC", "QLD", "SA", "WA", "TAS", "NT", "ACT"),
+    str_to_upper(sa3) == str_to_upper(state),
+    quarter_date %in% as.Date(c("2025-03-01", "2025-06-01", "2026-03-01", "2026-06-01"))
+  ) |>
+  mutate(period = if_else(year(quarter_date) == 2025, "Before", "After")) |>
+  group_by(state, period) |>
+  summarise(
+    services = sum(services),
+    patient_contributions = sum(patient_contributions),
+    average_per_service = patient_contributions / services,
+    .groups = "drop"
+  ) |>
+  pivot_wider(names_from = period, values_from = c(services, patient_contributions, average_per_service)) |>
+  mutate(
+    contribution_change = patient_contributions_After - patient_contributions_Before,
+    average_change = average_per_service_After - average_per_service_Before
+  )
+```
+
+::: {.callout-note title="Executive summary"}
+
+- Australia's GP bulk-billing rate rose from `r percent(june_2025_rate, accuracy = 0.1)` to `r percent(latest_rate, accuracy = 0.1)` in the year to June 2026.
+- For 16–64-year-olds—the group most affected by the expanded incentive—it rose from `r percent(working_age_rates$rate_2025_06_01, accuracy = 0.1)` to `r percent(working_age_rates$rate_2026_06_01, accuracy = 0.1)`.
+- Working-age visit volumes were only `r percent(working_age_visit_change, accuracy = 0.1)` higher across March–June, while all-age patient contributions fell overall but not evenly.
+
+:::
+
+The policy period produced a clear change in **how GP care was billed**. The evidence for a matching change in **how much care people received** is much weaker.
+
+The comparisons below start in 2023, after the acute COVID-era disruption. March to June 2026 are the first clean post-policy months available; December 2025 is treated as a transition quarter. [Methods, caveats, detailed tables and the source audit are in the expandable appendix.](#appendix)
+
+## 1. National bulk-billing rates rose from `r percent(june_2025_rate, accuracy = 0.1)` to `r percent(latest_rate, accuracy = 0.1)`
+
+The national service-level rate rose `r number(100 * (latest_rate - june_2025_rate), accuracy = 0.1)` percentage points in the year to June 2026. The break is visible immediately after the 1 November 2025 incentive changes.
+
+```{r}
+#| label: fig-national-rate
+#| fig-cap: "Source: AIHW monthly GP bulk-billing data. The final three months are preliminary."
+#| fig-alt: "Line chart of Australia's monthly GP bulk-billing rate from January 2023 to June 2026. The rate rises sharply after the November 2025 policy line, from 78.8 per cent in June 2025 to 83.6 per cent in June 2026. April to June 2026 are shaded as preliminary."
+#| fig-width: 9
+#| fig-height: 5.2
+
+ggplot(national_monthly, aes(month, bulk_billing_rate)) +
+  annotate("rect", xmin = as.Date("2026-04-01"), xmax = as.Date("2026-07-01"), ymin = -Inf, ymax = Inf, fill = "grey80", alpha = 0.35) +
+  geom_vline(xintercept = policy_date, colour = "#B8472D", linewidth = 0.8) +
+  geom_line(colour = "#245A73", linewidth = 1) +
+  geom_point(data = filter(national_monthly, month == latest_expected_month), colour = "#245A73", size = 2.8) +
+  annotate("text", x = policy_date, y = 0.765, label = "1 Nov 2025\nchanges begin", hjust = 1.05, vjust = 0, colour = "#8F3522", size = 3.4) +
+  annotate("text", x = latest_expected_month, y = latest_rate, label = percent(latest_rate, accuracy = 0.1), hjust = -0.15, vjust = -0.5, colour = "#245A73", fontface = "bold") +
+  scale_x_date(date_breaks = "6 months", date_labels = "%b\n%Y", expand = expansion(mult = c(0.01, 0.08))) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0.74, 0.86)) +
   labs(
-    x = NULL,
-    y = "Differential visit change per 10pp exposure",
-    shape = NULL
+    title = paste0(
+      "National bulk-billing rate rose from ", percent(june_2025_rate, accuracy = 0.1),
+      " to ", percent(latest_rate, accuracy = 0.1)
+    ),
+    subtitle = "Monthly share of claimed GP attendances bulk billed, Australia",
+    x = NULL, y = NULL
   )
 ```
 
-```{r}
-#| label: mmm-visit-trends
-#| fig-cap: "Modified Monash GP visit volume indexed to the four-quarter pre-policy exposure window."
+A simple interrupted time-series model, controlling for the 2023–26 trend and calendar month, estimates an immediate `r number(100 * step_estimate$estimate, accuracy = 0.1)`-percentage-point step (HAC 95% interval `r number(100 * step_estimate$lower, accuracy = 0.1)` to `r number(100 * step_estimate$upper, accuracy = 0.1)`). That supports a break in the series' timing, not proof that the policy was the only cause.
 
-mmm_trends <- mmm_visits |>
-  filter(modified_monash != "Unknown") |>
-  group_by(modified_monash, quarter_date, quarter_status) |>
-  summarise(services = sum(services, na.rm = TRUE), .groups = "drop") |>
-  group_by(modified_monash) |>
-  mutate(
-    baseline_services = mean(services[quarter_date %in% exposure_baseline_quarters$quarter_date], na.rm = TRUE),
-    visit_index = services / baseline_services
-  ) |>
-  ungroup()
+## 2. Bulk billing for ages 16–64 rose from `r percent(working_age_rates$rate_2025_06_01, accuracy = 0.1)` to `r percent(working_age_rates$rate_2026_06_01, accuracy = 0.1)`
 
-ggplot(mmm_trends, aes(quarter_date, visit_index, colour = modified_monash)) +
-  geom_vline(xintercept = transition_quarter_date, linetype = "dotted", colour = "grey45") +
-  geom_vline(xintercept = clean_post_quarter_date, linetype = "dashed", colour = "grey25") +
-  geom_line(linewidth = 0.8, na.rm = TRUE) +
-  scale_y_continuous(labels = percent) +
-  labs(x = NULL, y = "Visit volume index", colour = "Modified Monash")
-```
+The age pattern is the cleanest sign that the expansion reached its target group. The rate for 16–64-year-olds rose `r number(working_age_rates$change_pp, accuracy = 0.1)` percentage points; the changes for children and people aged 65 and over were much smaller.
 
 ```{r}
-#| label: unknown-mmm-check
+#| label: fig-age-change
+#| fig-cap: "Source: AIHW monthly GP bulk-billing data. June 2026 is preliminary. Changes are percentage points."
+#| fig-alt: "Horizontal dot plot of the June 2025 to June 2026 change in GP bulk-billing rates by age. Ages 16 to 64 increased by 8.0 percentage points, compared with 1.0 point for ages 0 to 15 and 1.4 points for ages 65 and over."
+#| fig-width: 8
+#| fig-height: 4.2
 
-unknown_mmm <- mmm_visits |>
-  group_by(quarter, quarter_date) |>
-  summarise(
-    total_services = sum(services, na.rm = TRUE),
-    unknown_services = sum(services[modified_monash == "Unknown"], na.rm = TRUE),
-    unknown_share = unknown_services / total_services,
-    .groups = "drop"
-  ) |>
-  filter(quarter_date >= as.Date("2023-09-01")) |>
-  arrange(quarter_date)
-
-unknown_mmm |>
-  mutate(
-    total_services = comma(total_services),
-    unknown_services = comma(unknown_services),
-    unknown_share = percent(unknown_share, accuracy = 0.001)
-  ) |>
-  kable()
-```
-
-The `Unknown` Modified Monash category is excluded from the indexed MMM chart because it is tiny in absolute terms and appears to have a classification break around the June quarter 2024. It rises from hundreds of services per quarter to roughly 7,000-9,000, but still remains around `r percent(max(unknown_mmm$unknown_share, na.rm = TRUE), accuracy = 0.001)` of GP non-referred attendances. That makes it visually noisy as an index and not a meaningful access geography.
-
-```{r}
-#| label: sa3-growth-table
-
-sa3_growth |>
-  group_by(exposure_band) |>
-  summarise(
-    sa3s = n(),
-    median_pre_policy_non_bulk_billed_share = median(pre_policy_non_bulk_billed_share, na.rm = TRUE),
-    median_visit_growth = median(visit_growth, na.rm = TRUE),
-    weighted_visit_growth = weighted.mean(visit_growth, w = baseline_services, na.rm = TRUE),
-    .groups = "drop"
-  ) |>
-  mutate(
-    median_pre_policy_non_bulk_billed_share = percent(median_pre_policy_non_bulk_billed_share, accuracy = 0.1),
-    median_visit_growth = percent(median_visit_growth, accuracy = 0.1),
-    weighted_visit_growth = percent(weighted_visit_growth, accuracy = 0.1)
-  ) |>
-  kable()
-```
-
-## Early Answer
-
-```{r}
-#| label: answer-table
-
-national_delta <- window_compare(national)$change[[1]]
-age_delta <- window_compare(age_rates) |>
-  select(group, change) |>
-  arrange(desc(change))
-seifa_delta <- window_compare(seifa_rates) |>
-  select(group, change) |>
-  arrange(desc(change))
-visit_access_estimate <- access_model_summary |>
-  filter(outcome == "GP visit volume") |>
-  pull(estimate) |>
-  first()
-
-tibble(
-  question = c(
-    "Did the national rate move after 1 November 2025?",
-    "Was the largest age signal in working-age adults?",
-    "Did lower and higher socioeconomic areas both move?",
-    "Did higher-exposure SA3s also show more GP visits?",
-    "Can we call this access rather than billing?"
-  ),
-  early_read = c(
-    paste0("National before/after change: ", percent(national_delta, accuracy = 0.1), "."),
-    paste0("Largest age-band change: ", age_delta$group[[1]], " at ", percent(age_delta$change[[1]], accuracy = 0.1), "."),
-    paste0("Largest SEIFA change: ", seifa_delta$group[[1]], " at ", percent(seifa_delta$change[[1]], accuracy = 0.1), "."),
-    paste0("SA3 fixed-effects visit estimate: ", visit_access_estimate, " per 10 percentage point higher pre-policy non-bulk-billed share."),
-    "Not fully. The data show billing and service-use/payment signals, not unmet need or appointment availability."
+age_change |>
+  mutate(group = factor(group, levels = c("65+", "0-15", "16-64")), emphasis = group == "16-64") |>
+  ggplot(aes(change_pp, group)) +
+  geom_segment(aes(x = 0, xend = change_pp, yend = group), colour = "grey75", linewidth = 1.2) +
+  geom_point(aes(colour = emphasis), size = 4, show.legend = FALSE) +
+  geom_text(aes(label = paste0(number(change_pp, accuracy = 0.1), " pp")), hjust = -0.2, fontface = "bold", size = 3.8) +
+  scale_colour_manual(values = c(`FALSE` = "#77838D", `TRUE` = "#B8472D")) +
+  scale_x_continuous(limits = c(0, 9), breaks = seq(0, 8, 2), expand = expansion(mult = c(0, 0.03))) +
+  labs(
+    title = paste0(
+      "Bulk billing for ages 16-64 rose from ",
+      percent(working_age_rates$rate_2025_06_01, accuracy = 0.1), " to ",
+      percent(working_age_rates$rate_2026_06_01, accuracy = 0.1)
+    ),
+    subtitle = "Change in GP bulk-billing rate, June 2025 to June 2026",
+    x = "Percentage-point change", y = NULL
   )
-) |>
-  kable()
 ```
 
-The early read is that the 1 November 2025 changes should be treated as having shifted measured bulk billing access if the post-November lift is visible nationally, strongest for `16-64`, and not limited to places that already had high bulk billing. The broader access case is stronger if the SA3 visit-volume model shows higher-exposure areas also gaining visits after the clean post-policy quarter. The evidence is weaker if the rise is small relative to normal monthly volatility, if it does not persist in the rolling average, or if service-use checks deteriorate.
+From here, the age-specific analysis focuses on 16–64-year-olds. Children and older Australians were already covered by earlier bulk-billing incentives. The 16–64 band is still broader than the newly eligible population because it includes concession-card holders who were already eligible.
 
-## Caveats
+## 3. The rise was nationwide—and strongest in more disadvantaged areas
 
-- AIHW's monthly dashboard is based on date of service; Department Medicare statistics can differ because official Medicare statistics are generally processed-date based.
-- AIHW notes that the last 3 months of monthly dashboard data are preliminary.
-- Bulk billing rate is a claim-level access proxy, not a direct measure of unmet need, waiting time or clinic availability.
-- The AIHW benefits series excludes Bulk Billing Practice Incentive Program payments.
-- LGA statistics are based on patient location. People can travel outside their LGA for care.
-- The SA3 visit model uses service counts rather than per-capita rates. SA3 fixed effects absorb stable differences between areas, but population growth can still affect visit volumes.
-- The December quarter 2025 is excluded from the visit model because it mixes one pre-policy month with two post-policy months.
-- PHN and LGA summaries in this post mix monthly AIHW dashboard data and quarterly Department statistics; they are used as triangulation, not as one single modelled dataset.
-- Modified Monash should be added with a proper spatial or fine-geography concordance before making MMM-specific claims.
+Among 16–64-year-olds, the bulk-billing rate rose in every state and territory. The increase ranged from `r number(min(state_working_age_rates$change_pp), accuracy = 0.1)` percentage points in the ACT to `r number(max(state_working_age_rates$change_pp), accuracy = 0.1)` points in the Northern Territory.
+
+```{r}
+#| label: fig-state-working-age
+#| fig-cap: "Source: AIHW monthly GP bulk-billing data. Ages 16–64; June 2026 is preliminary."
+#| fig-alt: "Dumbbell chart comparing June 2025 and June 2026 working-age bulk-billing rates in each state and territory. Every jurisdiction increased, with the largest increase in the Northern Territory and the smallest in the Australian Capital Territory."
+#| fig-width: 9
+#| fig-height: 5.6
+
+state_working_age_rates |>
+  mutate(state = reorder(state, change_pp)) |>
+  ggplot(aes(y = state)) +
+  geom_segment(aes(x = rate_2025_06_01, xend = rate_2026_06_01, yend = state), colour = "grey72", linewidth = 1.5) +
+  geom_point(aes(x = rate_2025_06_01), colour = "#77838D", size = 3) +
+  geom_point(aes(x = rate_2026_06_01), colour = "#B8472D", size = 3.5) +
+  geom_text(aes(x = rate_2026_06_01, label = paste0("+", number(change_pp, accuracy = 0.1), " pp")), hjust = -0.15, size = 3.2) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), limits = c(0.4, 0.93), expand = expansion(mult = c(0, 0.04))) +
+  labs(
+    title = "Working-age bulk billing rose in every state and territory",
+    subtitle = "June 2025 (grey) to June 2026 (orange)",
+    x = NULL, y = NULL
+  )
+```
+
+The socioeconomic pattern also points in the intended direction. All-age rates were highest in the most disadvantaged areas before the change and rose across every SEIFA quintile. The most advantaged quintile recorded the smallest increase, at `r number(filter(seifa_change, str_detect(group, "most advantaged"))$change_pp, accuracy = 0.1)` points.
+
+```{r}
+#| label: fig-seifa-rates
+#| fig-cap: "Source: AIHW monthly GP bulk-billing data. These SEIFA aggregates cover all ages because the published workbook does not cross age with SEIFA. June 2026 is preliminary."
+#| fig-alt: "Dumbbell chart comparing all-age bulk-billing rates across five socioeconomic-area quintiles in June 2025 and June 2026. Rates rose in every quintile, with the most disadvantaged areas remaining highest and the most advantaged areas recording the smallest increase."
+#| fig-width: 9
+#| fig-height: 5.4
+
+seifa_change |>
+  mutate(group = factor(group, levels = rev(group))) |>
+  ggplot(aes(y = group)) +
+  geom_segment(aes(x = june_2025, xend = june_2026, yend = group), colour = "grey72", linewidth = 1.5) +
+  geom_point(aes(x = june_2025), colour = "#77838D", size = 3) +
+  geom_point(aes(x = june_2026), colour = "#245A73", size = 3.5) +
+  geom_text(aes(x = june_2026, label = paste0("+", number(change_pp, accuracy = 0.1), " pp")), hjust = -0.15, size = 3.2) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), limits = c(0.65, 0.96), expand = expansion(mult = c(0, 0.05))) +
+  labs(
+    title = "Bulk billing rose across every socioeconomic-area quintile",
+    subtitle = "All ages; June 2025 (grey) to June 2026 (blue)",
+    x = NULL, y = NULL
+  )
+```
+
+SEIFA describes the area where a service was delivered, not the circumstances of each patient. It is useful distributional context, not a causal test.
+
+## 4. Working-age visits were only `r percent(working_age_visit_change, accuracy = 0.1)` higher across the clean post-policy months
+
+The working-age billing shift did not translate into a clear, sustained rise in claimed visits. Across March–June 2026, reconstructed 16–64 visit volumes were `r percent(working_age_visit_change, accuracy = 0.1)` above the same months in 2025—but the monthly pattern swung from growth to decline and back again.
+
+```{r}
+#| label: fig-working-age-visits
+#| fig-cap: "Source: AIHW monthly GP bulk-billing data. Total visits for ages 16–64 are reconstructed as bulk-billed services divided by the published bulk-billing rate. The final three months are preliminary."
+#| fig-alt: "Bar chart of year-on-year changes in working-age GP visits for March to June 2026. March, April and June were higher, May was lower, and the four months together were 1.3 per cent higher."
+#| fig-width: 8
+#| fig-height: 4.8
+
+working_age_visit_comparison |>
+  ggplot(aes(calendar_month, change)) +
+  geom_hline(yintercept = 0, colour = "grey55", linewidth = 0.7) +
+  geom_col(aes(fill = change >= 0), width = 0.62, show.legend = FALSE) +
+  geom_text(
+    aes(y = if_else(change >= 0, change + 0.004, change - 0.004), label = percent(change, accuracy = 0.1)),
+    vjust = if_else(working_age_visit_comparison$change >= 0, 0, 1), fontface = "bold", size = 3.6
+  ) +
+  scale_fill_manual(values = c(`FALSE` = "#77838D", `TRUE` = "#245A73")) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(-0.065, 0.07)) +
+  labs(
+    title = paste0("Working-age visits were ", percent(working_age_visit_change, accuracy = 0.1), " higher across March-June"),
+    subtitle = "Change from the same month in 2025, ages 16-64",
+    x = NULL, y = NULL
+  )
+```
+
+The simple post-COVID time-series check is similarly inconclusive. Controlling for a linear trend and calendar month from January 2023, it estimates an immediate `r percent(working_age_visit_step$change_percent / 100, accuracy = 0.1)` shift in working-age visits, with a 95% interval from `r percent(working_age_visit_step$lower_percent / 100, accuracy = 0.1)` to `r percent(working_age_visit_step$upper_percent / 100, accuracy = 0.1)`. The area-level sensitivity check also finds no clear relative visit gain in places with more scope to switch billing methods.
+
+This does not mean access did not improve. Claims cannot show whether waiting times shortened, unmet need fell or continuity improved. It means the available volume evidence does not yet show a decisive access response.
+
+## 5. Patients paid less overall—but the relief was uneven
+
+Across the March and June quarters, total patient contributions fell by `r dollar(abs(patient_cost_change$contribution_change) / 1e6, suffix = "m", accuracy = 0.1)` compared with the same quarters in 2025. Average patient contributions across **all** claimed GP services fell from `r dollar(filter(patient_cost_national, str_starts(period, "Before"))$average_per_service, accuracy = 0.01)` to `r dollar(filter(patient_cost_national, str_starts(period, "After"))$average_per_service, accuracy = 0.01)`.
+
+But that relief was not evenly distributed. When SA3s are grouped by their pre-policy bulk-billing rate, the average fell in four of five groups—and rose slightly in the group that began with the lowest bulk-billing rates and highest patient costs.
+
+```{r}
+#| label: fig-patient-costs-area
+#| fig-cap: "Source: Department of Health, Disability and Ageing quarterly Medicare statistics. All ages; classified SA3s; combined March and June quarters. Average patient contribution is total patient-billed fees less Medicare benefits, divided by all claimed services."
+#| fig-alt: "Dumbbell chart comparing average patient contributions per GP service before and after the policy across five groups of SA3 areas. Costs fell in four groups but rose slightly in the group with the lowest baseline bulk-billing rate."
+#| fig-width: 9
+#| fig-height: 5.4
+
+patient_cost_by_area_group |>
+  ggplot(aes(y = group)) +
+  geom_segment(aes(x = average_per_service_Before, xend = average_per_service_After, yend = group), colour = "grey72", linewidth = 1.5) +
+  geom_point(aes(x = average_per_service_Before), colour = "#77838D", size = 3) +
+  geom_point(aes(x = average_per_service_After), colour = "#B8472D", size = 3.5) +
+  geom_text(
+    aes(
+      x = pmax(average_per_service_Before, average_per_service_After),
+      label = paste0(if_else(average_change > 0, "+$", "-$"), number(abs(average_change), accuracy = 0.01))
+    ),
+    hjust = -0.15, size = 3.2
+  ) +
+  scale_x_continuous(labels = dollar_format(accuracy = 1), limits = c(0, 25), expand = expansion(mult = c(0, 0.04))) +
+  labs(
+    title = "Patient costs fell in four of five area groups",
+    subtitle = "Average contribution per GP service; before (grey) and after (orange)",
+    x = NULL, y = NULL
+  )
+```
+
+There is another important split: among the visits that were still patient billed, the average contribution rose from `r dollar(filter(patient_cost_national, str_starts(period, "Before"))$average_per_patient_billed_service, accuracy = 0.01)` to `r dollar(filter(patient_cost_national, str_starts(period, "After"))$average_per_patient_billed_service, accuracy = 0.01)`. In other words, many services moved out of patient billing, lowering the average across all care; patients who still paid faced a higher average bill.
+
+## Three-line takeaway
+
+- **Billing:** the policy period coincided with a large, nationwide rise in bulk billing, concentrated among 16–64-year-olds.
+- **Access:** working-age visit volumes were only modestly higher and inconsistent month to month; the models do not show a decisive increase.
+- **Cost:** patients paid less in aggregate, but the remaining patient-billed visits became more expensive and relief did not reach every area equally.
+
+## Appendix {#appendix}
+
+::: {.callout-warning collapse="true" title="Caveats and interpretation"}
+
+- Bulk billing is measured per service, not per patient. It does not tell us how many people had every visit bulk billed.
+- The 16–64 band includes some concession-card holders who were already eligible before November 2025. It is a useful target-age proxy, not a treatment group.
+- The published AIHW workbook crosses age with state and LGA, but not with SEIFA. The SEIFA results are therefore all ages.
+- The Department's SA3 patient-cost data are also all ages. Patient contributions are patient-billed fees less Medicare benefits; they do not include every cost of obtaining care.
+- AIHW marks April–June 2026 as preliminary. Results may be revised.
+- Claims measure delivered services. They cannot identify waiting time, unmet need, clinical need, provider supply or continuity of care.
+- The policy began on 1 November 2025. December 2025 mixes pre- and post-policy months, so the quarterly model excludes it.
+- These are descriptive and associational comparisons. Other events at the same time may contribute to the observed changes.
+
+:::
+
+::: {.callout-note collapse="true" title="Detailed rates and changes"}
+
+```{r}
+#| label: tbl-age-rates
+
+age_rate_summary |>
+  transmute(
+    `Age group` = group,
+    `June 2025` = percent(rate_2025_06_01, accuracy = 0.1),
+    `June 2026` = percent(rate_2026_06_01, accuracy = 0.1),
+    `Change (pp)` = number(change_pp, accuracy = 0.1)
+  ) |>
+  kable(align = c("l", "r", "r", "r"))
+```
+
+```{r}
+#| label: tbl-state-working-age
+
+state_working_age_rates |>
+  arrange(desc(change_pp)) |>
+  transmute(
+    Jurisdiction = state,
+    `June 2025` = percent(rate_2025_06_01, accuracy = 0.1),
+    `June 2026` = percent(rate_2026_06_01, accuracy = 0.1),
+    `Change (pp)` = number(change_pp, accuracy = 0.1)
+  ) |>
+  kable(align = c("l", "r", "r", "r"))
+```
+
+```{r}
+#| label: tbl-seifa
+
+seifa_change |>
+  transmute(
+    Quintile = group,
+    `June 2025` = percent(june_2025, accuracy = 0.1),
+    `June 2026` = percent(june_2026, accuracy = 0.1),
+    `Change (pp)` = number(change_pp, accuracy = 0.1)
+  ) |>
+  kable(align = c("l", "r", "r", "r"))
+```
+
+:::
+
+::: {.callout-note collapse="true" title="Visit-volume and patient-cost tables"}
+
+```{r}
+#| label: tbl-working-age-visits
+
+working_age_visit_comparison |>
+  transmute(
+    Month = calendar_month,
+    `Visits 2025` = comma(visits_2025, accuracy = 1),
+    `Visits 2026` = comma(visits_2026, accuracy = 1),
+    Change = percent(change, accuracy = 0.1)
+  ) |>
+  kable(align = c("l", "r", "r", "r"))
+```
+
+```{r}
+#| label: tbl-patient-cost-area
+
+patient_cost_by_area_group |>
+  transmute(
+    `Baseline area group` = group,
+    `Before: average per service` = dollar(average_per_service_Before, accuracy = 0.01),
+    `After: average per service` = dollar(average_per_service_After, accuracy = 0.01),
+    `Change per service` = dollar(average_change, accuracy = 0.01),
+    `Change among patient-billed services` = dollar(patient_billed_average_change, accuracy = 0.01)
+  ) |>
+  kable(align = c("l", "r", "r", "r", "r"))
+```
+
+```{r}
+#| label: tbl-patient-cost-state
+
+state_patient_costs |>
+  arrange(average_change) |>
+  transmute(
+    Jurisdiction = state,
+    `Before: average per service` = dollar(average_per_service_Before, accuracy = 0.01),
+    `After: average per service` = dollar(average_per_service_After, accuracy = 0.01),
+    `Change per service` = dollar(average_change, accuracy = 0.01),
+    `Change in total contributions` = dollar(contribution_change / 1e6, suffix = "m", accuracy = 0.1)
+  ) |>
+  kable(align = c("l", "r", "r", "r", "r"))
+```
+
+:::
+
+::: {.callout-note collapse="true" title="Models and sensitivity checks"}
+
+The national billing-rate and working-age visit models cover January 2023 to June 2026. Each includes linear time, a November 2025 level indicator, a post-policy slope and calendar-month fixed effects. Confidence intervals use a Bartlett-kernel heteroskedasticity-and-autocorrelation-consistent covariance matrix with the automatic Newey–West lag rule. These identify a time-series break, not a causal effect.
+
+The area-level model is:
+
+$$
+\log(services_{it}) = \alpha_i + \lambda_t + \beta(Post_t \times Exposure_i) + \varepsilon_{it}
+$$
+
+Exposure is an SA3's non-bulk-billed share over the four clean quarters from December 2024 to September 2025, scaled so $\beta$ represents a 10-percentage-point difference. The balanced panel contains `r n_distinct(sa3_model_data$sa3_id)` classified SA3s and two clean post-policy quarters. Standard errors are clustered by SA3.
+
+```{r}
+#| label: tbl-sa3-models
+
+sa3_models |>
+  transmute(
+    Specification = specification,
+    `Change per 10 pp higher exposure` = percent(change_percent / 100, accuracy = 0.1),
+    `Clustered 95% interval` = paste0(
+      percent(lower_percent / 100, accuracy = 0.1), " to ",
+      percent(upper_percent / 100, accuracy = 0.1)
+    )
+  ) |>
+  kable(align = c("l", "r", "r"))
+```
+
+:::
+
+::: {.callout-note collapse="true" title="Sources, checks and reproducibility"}
+
+The monthly series is from the [AIHW Medicare bulk-billing dashboard](https://www.aihw.gov.au/reports/medicare/medicare-bulk-billing-gp-attendances-monthly-data/contents/dashboard), with definitions in its [technical notes](https://www.aihw.gov.au/reports/medicare/medicare-bulk-billing-gp-attendances-monthly-data/contents/technical-notes). AIHW [corrected the downloadable workbook on 31 August 2026](https://www.aihw.gov.au/reports/medicare/medicare-bulk-billing-gp-attendances-monthly-data/notes) after rates had been rounded to whole percentages. The quarterly service and patient-cost data are from the Department's [June-quarter SA3 publication](https://www.health.gov.au/resources/publications/medicare-quarterly-statistics-statistical-area-sa3-summary-june-quarter-2025-26?language=en).
+
+The [Department's commencement notice](https://www.health.gov.au/news/bulk-billing-practice-incentive-program-registration-now-open) documents the 1 November 2025 expansion. The Department also publishes a separate [per-patient bulk-billing dashboard](https://www.health.gov.au/resources/publications/medicare-statistics-per-patient-bulk-billing-dashboard-2025-26).
+
+The code validates coverage dates, panel completeness, rate ranges, numerator-denominator identities and SA3-to-national coverage before drawing charts or fitting models. Downloads are pinned to exact official files and SHA-256 checksums in `sources.csv`. Rendering with `BLOG_REFRESH_DATA=true` deliberately fetches the registered files again; a changed upstream file fails checksum validation before replacing the cache.
+
+```{r}
+#| label: tbl-sources
+
+source_registry |>
+  transmute(
+    Publisher = publisher,
+    Dataset = paste0("[", dataset, "](", landing_url, ")"),
+    `Source/revision date` = release_date,
+    `Coverage end` = coverage_end,
+    `SHA-256 prefix` = substr(sha256, 1, 12)
+  ) |>
+  kable(escape = FALSE, align = c("l", "l", "l", "l", "l"))
+```
+
+One source oddity is recorded rather than hidden: the Department's June-quarter publication currently links to a file whose URL still says “March quarter”. The workbook itself contains `r n_distinct(sa3_raw$quarter_date)` quarters through June 2026, and the parser stops if that coverage changes.
+
+:::

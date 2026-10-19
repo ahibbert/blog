@@ -4,5 +4,6 @@ Thumbs.db
 /_site/
 /_freeze/
 /posts/**/data/
+/posts/**/data-raw/
 
 **/*.quarto_ipynb

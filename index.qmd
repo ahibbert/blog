@@ -4,7 +4,11 @@ description: "Notes on statistical modelling, research software, public data que
 page-layout: full
 listing:
   id: post-listing
-  contents: posts/*/index.qmd
+  contents:
+    - posts/bulk-billing-changes-impact/index.qmd
+    - posts/housing-prices-first-pass/index.qmd
+    - posts/ndis-budget-utilisation-prediction/index.qmd
+    - posts/ndis-outcomes-spend-service-access/index.qmd
   sort: "date desc"
   type: default
   categories: false
@@ -35,8 +39,8 @@ listing:
       <span class="sheet-rule short"></span>
       <span class="sheet-rule"></span>
     </div>
-    <a class="pin pin-one" href="#threads">models</a>
-    <a class="pin pin-two" href="#threads">software</a>
+    <a class="pin pin-one" href="#posts">models</a>
+    <a class="pin pin-two" href="#posts">software</a>
     <a class="pin pin-three" href="#posts">data</a>
     <a class="pin pin-four" href="#posts">drafts</a>
     <div class="map-caption">
@@ -61,53 +65,3 @@ listing:
 
 :::{#post-listing}
 :::
-
-```{=html}
-<section class="section" id="threads" aria-labelledby="threads-title">
-  <div class="section-heading">
-    <p class="eyebrow">Themes</p>
-    <h2 id="threads-title">Recurring threads</h2>
-    <p>
-      A rough index for the kinds of writing that will sit here as the project grows.
-    </p>
-  </div>
-
-  <div class="card-grid">
-    <article class="project-card">
-      <div class="card-top">
-        <span class="type-chip">Statistical modelling</span>
-        <span class="status-chip in-progress">drafting</span>
-      </div>
-      <h3>Distributional regression</h3>
-      <p>
-        Notes on GAMLSS, longitudinal outcomes, dependence structures, and ways to make
-        model behaviour easier to inspect.
-      </p>
-    </article>
-
-    <article class="project-card">
-      <div class="card-top">
-        <span class="type-chip">Research software</span>
-        <span class="status-chip in-progress">drafting</span>
-      </div>
-      <h3>Building tools in public</h3>
-      <p>
-        Reflections on small tools, reproducibility, APIs, packages, validation, and how
-        to make technical systems easier to trust.
-      </p>
-    </article>
-
-    <article class="project-card">
-      <div class="card-top">
-        <span class="type-chip">Data questions</span>
-        <span class="status-chip in-progress">drafting</span>
-      </div>
-      <h3>Applied data notes</h3>
-      <p>
-        Short writeups around Australian data, public datasets, limitations, and the
-        practical work of turning a question into an analysis.
-      </p>
-    </article>
-  </div>
-</section>
-```

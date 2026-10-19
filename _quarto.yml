@@ -1,6 +1,13 @@
 project:
   type: website
   output-dir: _site
+  render:
+    - index.qmd
+    - about.qmd
+    - posts/bulk-billing-changes-impact/index.qmd
+    - posts/housing-prices-first-pass/index.qmd
+    - posts/ndis-budget-utilisation-prediction/index.qmd
+    - posts/ndis-outcomes-spend-service-access/index.qmd
   resources:
     - CNAME
 

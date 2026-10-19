@@ -3,14 +3,12 @@ Package: workbenchblog
 Title: Aydin Workbench Blog
 Version: 0.0.0.9000
 Imports:
-    broom,
+    digest,
     dplyr,
     forcats,
     ggplot2,
     knitr,
     lubridate,
-    purrr,
-    randomForest,
     rmarkdown,
     readr,
     readxl,

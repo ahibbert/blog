@@ -1,18 +1,11 @@
 ---
-title: "Are NDIS Participant Outcomes Changing?"
-description: "A simpler look at national NDIS participant outcome levels and changes after plan reassessment."
+title: "The Clearest Reported NDIS Outcome Gains Are in Early Childhood"
+description: "After one reassessment, most published NDIS outcome indicators move only a little. The larger gains are concentrated in communication and friendships among young children."
 date: "2026-06-10"
+date-modified: "2026-10-13"
 categories: [ndis, outcomes, disability, australia]
 author: "Aydin"
 ---
-
-The simplest outcomes question is not about spend. It is this:
-
-> Can we see any change in outcomes for NDIS participants?
-
-This post starts there. It uses the public participant outcomes files to ask what outcomes are measured, what the current national levels look like, and how reported outcomes change after plan reassessment. The analysis is descriptive. It shows changes in aggregate survey outcomes; it does not prove that the NDIS caused those changes for any individual participant.
-
-The companion budget and utilisation model is [here](../ndis-budget-utilisation-prediction/).
 
 ```{r}
 #| label: setup
@@ -23,24 +16,34 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(stringr)
-library(purrr)
-library(lubridate)
 library(forcats)
 library(scales)
 library(knitr)
 
-theme_set(theme_minimal(base_size = 12))
+source(file.path("..", "..", "R", "data_sources.R"))
 
-raw_dir <- file.path("data-raw", "ndis-outcomes")
-dir.create(raw_dir, recursive = TRUE, showWarnings = FALSE)
-
-page_urls <- list(
-  participant = "https://dataresearch.ndis.gov.au/datasets/participant-datasets"
+theme_set(
+  theme_minimal(base_size = 12) +
+    theme(
+      plot.title.position = "plot",
+      plot.caption.position = "plot",
+      panel.grid.minor = element_blank()
+    )
 )
-```
 
-```{r}
-#| label: helpers
+raw_dir <- "data-raw"
+source_registry <- read_source_registry("sources.csv")
+source_files <- lapply(
+  seq_len(nrow(source_registry)),
+  function(index) download_registered_source(source_registry[index, , drop = FALSE], raw_dir)
+)
+source_manifest <- write_source_manifest(source_files, file.path(raw_dir, "source-manifest.csv"))
+
+source_path <- function(source_id) {
+  index <- match(source_id, source_registry$source_id)
+  if (is.na(index)) stop("Missing source in sources.csv: ", source_id, call. = FALSE)
+  source_files[[index]]$path
+}
 
 clean_names <- function(x) {
   x |>
@@ -50,599 +53,348 @@ clean_names <- function(x) {
     str_replace_all("^_|_$", "")
 }
 
-clean_df <- function(x) {
-  names(x) <- clean_names(names(x))
-  x
+assert_true <- function(condition, message) {
+  if (!isTRUE(condition)) stop(message, call. = FALSE)
 }
 
-as_number <- function(x) {
-  if (is.numeric(x)) return(x)
-  parse_number(
-    as.character(x),
-    na = c("", "NA", "na", "n/a", "Not applicable", "No data available", "\\")
+cohort_label <- function(x) {
+  case_when(
+    x == "Participant 0 to before school" ~ "Early childhood",
+    x == "Participant starting school to 14" ~ "School age",
+    x == "Participant 15 to 24" ~ "Young people",
+    x == "Participant 25 and over" ~ "Adults",
+    TRUE ~ x
   )
 }
 
-as_rate <- function(x) {
-  out <- as_number(x)
-  ifelse(out > 1.5, out / 100, out)
-}
-
-safe_median <- function(x) {
-  x <- x[is.finite(x)]
-  if (length(x) == 0) return(NA_real_)
-  median(x)
-}
-
-format_optional_percent <- function(x, accuracy = 1) {
-  ifelse(is.na(x), NA_character_, percent(x, accuracy = accuracy))
-}
-
-read_page <- function(url) {
-  paste(readLines(url, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
-}
-
-extract_links <- function(url) {
-  html <- read_page(url)
-  base_url <- str_replace(url, "^(https?://[^/]+).*$", "\\1")
-  matches <- gregexpr("<a[^>]+href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", html, perl = TRUE)
-  pieces <- regmatches(html, matches)[[1]]
-  if (length(pieces) == 0) return(tibble(label = character(), url = character()))
-
-  tibble(raw = pieces) |>
-    mutate(
-      href = str_match(raw, "href=[\"']([^\"']+)[\"']")[, 2],
-      label = raw |>
-        str_replace_all("<[^>]+>", " ") |>
-        str_squish(),
-      url = case_when(
-        str_detect(href, "^https?://") ~ href,
-        str_detect(href, "^/") ~ paste0(base_url, href),
-        TRUE ~ paste0(str_remove(url, "/[^/]*$"), "/", href)
-      )
-    ) |>
-    select(label, url)
-}
-
-download_one <- function(url, filename) {
-  path <- file.path(raw_dir, filename)
-  if (!file.exists(path)) {
-    download.file(url, path, mode = "wb", quiet = TRUE)
-  }
-  path
-}
-
-download_named <- function(page_url, label_regex, filename) {
-  path <- file.path(raw_dir, filename)
-  if (file.exists(path)) return(path)
-
-  link <- extract_links(page_url) |>
-    filter(str_detect(label, regex(label_regex, ignore_case = TRUE))) |>
-    slice(1)
-
-  if (nrow(link) == 0) return(NA_character_)
-  download_one(link$url[[1]], filename)
-}
-
-cohort_levels <- c(
-  "Early childhood",
-  "School age",
-  "Young people",
-  "Adults",
-  "Family/carer of children",
-  "Family/carer of adults"
+direction_lookup <- bind_rows(
+  tibble(
+    cohort = "Early childhood",
+    indicator_number = 1:5,
+    direction_class = c("Adverse", rep("Favourable", 4))
+  ),
+  tibble(
+    cohort = "School age",
+    indicator_number = 1:8,
+    direction_class = rep("Favourable", 8)
+  ),
+  tibble(
+    cohort = "Young people",
+    indicator_number = 1:14,
+    direction_class = c(
+      rep("Favourable", 4), "Ambiguous", "Adverse", rep("Favourable", 8)
+    )
+  ),
+  tibble(
+    cohort = "Adults",
+    indicator_number = 1:15,
+    direction_class = c(
+      rep("Favourable", 3), "Ambiguous", "Adverse",
+      rep("Favourable", 7), "Adverse", rep("Favourable", 2)
+    )
+  )
+)
+assert_true(
+  nrow(direction_lookup) == 42 && !anyDuplicated(direction_lookup[c("cohort", "indicator_number")]),
+  "The explicit outcome-direction lookup is incomplete or duplicated."
 )
 
-standardise_cohort <- function(questionnaire) {
+short_outcome <- function(x) {
+  text <- str_to_lower(x)
   case_when(
-    questionnaire == "Participant 0 to before school" ~ "Early childhood",
-    questionnaire == "Participant starting school to 14" ~ "School age",
-    questionnaire == "Participant 15 to 24" ~ "Young people",
-    questionnaire == "Participant 25 and over" ~ "Adults",
-    questionnaire == "Family/carer of participant 0 to 14" ~ "Family/carer of children",
-    questionnaire == "Family/carer of participant 15 and over" ~ "Family/carer of adults",
-    TRUE ~ questionnaire
+    str_detect(text, "able to tell them") ~ "Can communicate what they want",
+    str_detect(text, "make friends with people outside") ~ "Can make friends outside family",
+    str_detect(text, "concerns in 6 or more") ~ "Fewer broad development concerns",
+    str_detect(text, "becoming more independent") ~ "Becoming more independent",
+    str_detect(text, "happy with the level of independence/control") ~ "Happy with independence and control",
+    str_detect(text, "paid job") ~ "Has a paid job",
+    str_detect(text, "volunteer") ~ "Volunteers",
+    str_detect(text, "participate in education") ~ "Education or training",
+    str_detect(text, "unable to do a course") ~ "Able to do wanted course or training",
+    str_detect(text, "actively involved in a community") ~ "Active in a community group",
+    str_detect(text, "did not have any difficulties accessing health") ~ "No difficulty accessing health care",
+    str_detect(text, "rate their health as good") ~ "Good or better health",
+    str_detect(text, "choose what they do each day") ~ "Chooses daily activities",
+    str_detect(text, "choose who supports") ~ "Chooses who supports them",
+    str_detect(text, "happy with their home") ~ "Happy with home",
+    str_detect(text, "safe or very safe") ~ "Feels safe at home",
+    str_detect(text, "mainstream class") ~ "Mainstream class attendance",
+    str_detect(text, "genuine say in decisions") ~ "Has a say in decisions",
+    str_detect(text, "want more choice and control") ~ "Wants more choice and control",
+    str_detect(text, "no friends other than") ~ "Has friends beyond family or paid staff",
+    str_detect(text, "welcomed or actively include") ~ "Welcomed or included",
+    TRUE ~ str_remove(x, "^% ") |> str_trunc(52)
   )
 }
-
-classify_outcome_theme <- function(indicator) {
-  text <- str_to_lower(indicator)
-  case_when(
-    str_detect(text, "concerns|development|functional|self-care|independent|daily living") ~ "Development and daily living",
-    str_detect(text, "communicat|tell them what|what they want") ~ "Communication",
-    str_detect(text, "choice|control|decisions|advocacy|advocate|rights|choose who supports|choose what they do") ~ "Choice and control",
-    str_detect(text, "friend|relationship|community|social|family life|meet more people|be more involved|welcomed|included") ~ "Relationships and community",
-    str_detect(text, "home|safe") ~ "Home and safety",
-    str_detect(text, "health|wellbeing|well-being") ~ "Health and wellbeing",
-    str_detect(text, "school|education|training|learn|course|job|employment|paid job|volunteer|mainstream settings") ~ "Learning and work",
-    str_detect(text, "services|specialist|programs and activities") ~ "Service access",
-    TRUE ~ "Other outcomes"
-  )
-}
-
-classify_direction <- function(indicator) {
-  text <- str_to_lower(indicator)
-  case_when(
-    str_detect(text, "concerns in 6 or more|with no friends|no friends other than|unable to do .*wanted|difficulties accessing") &
-      !str_detect(text, "did not have any difficulties") ~ "Lower is better",
-    str_detect(text, "want more choice and control") ~ "Lower may be better",
-    str_detect(text, "^has the ndis|involvement with the ndis|ndis helped") ~ "Reported improvement",
-    str_detect(text, "^%|^of those") ~ "Higher is better",
-    TRUE ~ "Interpret with care"
-  )
-}
-
-direction_adjust_change <- function(change, direction) {
-  case_when(
-    direction == "Lower is better" ~ -change,
-    direction == "Higher is better" ~ change,
-    TRUE ~ NA_real_
-  )
-}
-```
-
-## Data
-
-The two source files are the national NDIS participant outcomes extracts:
-
-1. Baseline outcomes: current reported levels by state, respondent group and indicator.
-2. Longitudinal outcomes: baseline and reassessment values for people with different numbers of plan reassessments.
-
-The main charts use the national rows only, where `StateCd == "ALL"`. Participant cohorts are shown first. Family and carer outcomes are kept as a short companion note at the end.
-
-```{r}
-#| label: read-outcomes
-
-baseline_outcomes_path <- download_named(
-  page_urls$participant,
-  "^Baseline Outcomes data",
-  "baseline_outcomes.csv"
-)
-
-longitudinal_outcomes_path <- download_named(
-  page_urls$participant,
-  "^Longitudinal Outcomes data",
-  "longitudinal_outcomes.csv"
-)
 
 baseline_raw <- read_csv(
-  baseline_outcomes_path,
-  na = c("", "NA", "na", "n/a"),
-  show_col_types = FALSE
-) |>
-  clean_df() |>
-  mutate(
-    report_date = dmy(rprtdt),
-    percentage = as_rate(percentage),
-    cohort_label = factor(standardise_cohort(questionnaire), levels = cohort_levels),
-    outcome_theme = classify_outcome_theme(indicator_description),
-    direction = classify_direction(indicator_description),
-    respondent_type = if_else(str_detect(questionnaire, "^Participant"), "Participant", "Family/carer")
-  )
-
-longitudinal_raw <- read_csv(
-  longitudinal_outcomes_path,
-  na = c("", "NA", "na", "n/a"),
-  show_col_types = FALSE
-) |>
-  clean_df() |>
-  mutate(
-    report_date = dmy(rprtdt),
-    across(starts_with("percentage_"), as_rate),
-    cohort_label = factor(standardise_cohort(questionnaire), levels = cohort_levels),
-    outcome_theme = classify_outcome_theme(indicator_description),
-    direction = classify_direction(indicator_description),
-    respondent_type = if_else(str_detect(questionnaire, "^Participant"), "Participant", "Family/carer")
-  )
-
-participant_baseline <- baseline_raw |>
-  filter(statecd == "ALL", respondent_type == "Participant")
-
-participant_longitudinal <- longitudinal_raw |>
-  filter(statecd == "ALL", respondent_type == "Participant")
-
-family_longitudinal <- longitudinal_raw |>
-  filter(statecd == "ALL", respondent_type == "Family/carer")
-
-source_summary <- tibble(
-  file = c("Baseline outcomes", "Longitudinal outcomes"),
-  report_date = c(max(baseline_raw$report_date, na.rm = TRUE), max(longitudinal_raw$report_date, na.rm = TRUE)),
-  national_participant_rows = c(nrow(participant_baseline), nrow(participant_longitudinal)),
-  participant_cohorts = c(n_distinct(participant_baseline$cohort_label), n_distinct(participant_longitudinal$cohort_label))
+  source_path("ndis_baseline_outcomes_2026_06"),
+  show_col_types = FALSE,
+  na = c("", "NA", "na")
 )
-```
+longitudinal_raw <- read_csv(
+  source_path("ndis_longitudinal_outcomes_2026_06"),
+  show_col_types = FALSE,
+  na = c("", "NA", "na")
+)
+names(baseline_raw) <- clean_names(names(baseline_raw))
+names(longitudinal_raw) <- clean_names(names(longitudinal_raw))
 
-```{r}
-#| label: source-summary
+baseline_required <- c(
+  "rprtdt", "statecd", "questionnaire", "indicator_number",
+  "indicator_description", "percentage"
+)
+longitudinal_required <- c(
+  "rprtdt", "statecd", "number_of_sf_reassessments", "questionnaire",
+  "indicator_number", "indicator_description", "percentage_t0", "percentage_t1"
+)
+assert_true(all(baseline_required %in% names(baseline_raw)), "The baseline outcomes schema has changed.")
+assert_true(all(longitudinal_required %in% names(longitudinal_raw)), "The longitudinal outcomes schema has changed.")
 
-source_summary |>
-  mutate(
-    report_date = format(report_date, "%d %B %Y"),
-    national_participant_rows = comma(national_participant_rows)
-  ) |>
-  kable()
-```
-
-## What Outcomes Are Measured?
-
-The participant files cover four broad age cohorts. The outcomes are not identical across ages: early-childhood items focus on development and communication, school-age items add education and independence, and adult items add choice, home, health, education, work and volunteering.
-
-```{r}
-#| label: outcome-map
-
-participant_outcome_map <- bind_rows(
-  participant_baseline |>
-    transmute(cohort_label, outcome_theme, indicator_description, direction),
-  participant_longitudinal |>
-    transmute(cohort_label, outcome_theme, indicator_description, direction)
-) |>
-  distinct()
-
-outcome_theme_table <- participant_outcome_map |>
-  group_by(cohort_label, outcome_theme) |>
-  summarise(
-    outcomes = n_distinct(indicator_description),
-    example_outcomes = str_c(head(unique(indicator_description), 2), collapse = "; "),
-    .groups = "drop"
-  ) |>
-  arrange(cohort_label, outcome_theme)
-
-outcome_theme_table |>
-  mutate(cohort_label = as.character(cohort_label)) |>
-  kable(col.names = c("Cohort", "Outcome theme", "Outcomes", "Example outcomes"))
-```
-
-The direction labels are deliberately conservative. Most percentage items are easier to read as higher is better, but some indicators are clearly negative: concerns in many areas, having no friends other than family or paid staff, or being unable to do a course or training the participant wanted to do.
-
-```{r}
-#| label: direction-table
-
-participant_outcome_map |>
-  count(direction, sort = TRUE, name = "outcomes") |>
-  kable(col.names = c("Direction label", "Outcome rows"))
-```
-
-## Current Levels
-
-The baseline file gives the latest national level for each participant indicator. This is the best starting point before asking whether anything changed.
-
-```{r}
-#| label: baseline-theme-summary
-#| fig-cap: "Median national baseline outcome level by participant cohort and outcome theme."
-
-baseline_theme_summary <- participant_baseline |>
-  group_by(cohort_label, outcome_theme) |>
-  summarise(
-    outcomes = n_distinct(indicator_description),
-    median_level = safe_median(percentage),
-    p25 = quantile(percentage, 0.25, na.rm = TRUE),
-    p75 = quantile(percentage, 0.75, na.rm = TRUE),
-    .groups = "drop"
-  ) |>
-  filter(is.finite(median_level))
-
-baseline_theme_summary |>
-  ggplot(aes(fct_reorder(outcome_theme, median_level), median_level)) +
-  geom_col(fill = "#2f6f73") +
-  geom_errorbar(aes(ymin = p25, ymax = p75), width = 0.2, colour = "grey35") +
-  coord_flip() +
-  facet_wrap(~ cohort_label, scales = "free_y") +
-  scale_y_continuous(labels = percent) +
-  labs(x = NULL, y = "Baseline percentage")
-```
-
-```{r}
-#| label: baseline-level-table
-
-participant_baseline |>
-  arrange(cohort_label, outcome_theme, indicator_number) |>
+baseline <- baseline_raw |>
+  filter(statecd == "ALL", str_starts(questionnaire, "Participant")) |>
   transmute(
-    Cohort = as.character(cohort_label),
-    Theme = outcome_theme,
-    Outcome = indicator_description,
-    Direction = direction,
-    Level = percent(percentage, accuracy = 1)
-  ) |>
-  kable()
-```
-
-At baseline, the adult indicators show some obvious gaps as well as strengths. For example, many adults report choice over daily decisions and supports, but paid work and volunteering are much lower-level outcomes. For children, the outcome set is different: it is more about development, communication, friendships, community inclusion and school.
-
-## Change After Reassessment
-
-The cleanest first longitudinal comparison is baseline to reassessment 1 among national participant rows with one plan reassessment. This keeps the comparison simple and avoids mixing people with very different reassessment histories.
-
-```{r}
-#| label: reassessment-one-data
-
-participant_reassessment1 <- participant_longitudinal |>
-  filter(number_of_plan_reassessments == 1) |>
-  transmute(
-    cohort_label,
-    outcome_theme,
-    indicator_number,
-    indicator_description,
-    direction,
-    baseline = percentage_baseline,
-    reassessment_1 = percentage_reassessment_1,
-    raw_change = reassessment_1 - baseline,
-    direction_adjusted_change = direction_adjust_change(raw_change, direction)
+    report_date = as.Date(rprtdt, "%d-%m-%Y"),
+    cohort = cohort_label(questionnaire),
+    indicator_number = as.integer(indicator_number),
+    outcome = indicator_description,
+    baseline_rate = as.numeric(percentage)
   )
 
-comparable_reassessment1 <- participant_reassessment1 |>
-  filter(is.finite(baseline), is.finite(reassessment_1), is.finite(direction_adjusted_change))
-```
-
-```{r}
-#| label: reassessment-one-summary
-#| fig-cap: "Median direction-adjusted change from baseline to reassessment 1."
-
-reassessment1_summary <- comparable_reassessment1 |>
-  group_by(cohort_label, outcome_theme) |>
-  summarise(
-    outcomes = n_distinct(indicator_description),
-    median_change = safe_median(direction_adjusted_change),
-    p25 = quantile(direction_adjusted_change, 0.25, na.rm = TRUE),
-    p75 = quantile(direction_adjusted_change, 0.75, na.rm = TRUE),
-    .groups = "drop"
-  ) |>
-  filter(is.finite(median_change))
-
-reassessment1_summary |>
-  ggplot(aes(fct_reorder(outcome_theme, median_change), median_change)) +
-  geom_hline(yintercept = 0, colour = "grey60") +
-  geom_col(fill = "#7a5c2e") +
-  geom_errorbar(aes(ymin = p25, ymax = p75), width = 0.2, colour = "grey35") +
-  coord_flip() +
-  facet_wrap(~ cohort_label, scales = "free_y") +
-  scale_y_continuous(labels = percent) +
-  labs(x = NULL, y = "Direction-adjusted percentage-point change")
-```
-
-Most of the comparable indicators move in a favourable direction after the first reassessment, but the size varies. The table below keeps the raw baseline and reassessment percentages visible, then adds a direction-adjusted change only where the direction is clear.
-
-```{r}
-#| label: reassessment-one-table
-
-comparable_reassessment1 |>
-  mutate(abs_change = abs(direction_adjusted_change)) |>
-  arrange(desc(abs_change)) |>
-  slice_head(n = 25) |>
-  transmute(
-    Cohort = as.character(cohort_label),
-    Theme = outcome_theme,
-    Outcome = indicator_description,
-    Direction = direction,
-    Baseline = percent(baseline, accuracy = 1),
-    `Reassessment 1` = percent(reassessment_1, accuracy = 1),
-    `Raw change` = percent(raw_change, accuracy = 0.1),
-    `Adjusted change` = percent(direction_adjusted_change, accuracy = 0.1)
-  ) |>
-  kable()
-```
-
-Some longitudinal items ask directly whether the NDIS helped or improved something. These do not have a meaningful baseline percentage, so they are better read as reassessment-level responses rather than baseline-to-reassessment changes.
-
-```{r}
-#| label: direct-improvement-items
-
-direct_improvement_items <- participant_reassessment1 |>
-  filter(is.na(baseline), is.finite(reassessment_1), direction == "Reported improvement") |>
-  arrange(cohort_label, outcome_theme, indicator_number)
-
-direct_improvement_items |>
-  transmute(
-    Cohort = as.character(cohort_label),
-    Theme = outcome_theme,
-    Outcome = indicator_description,
-    `Reported improvement at reassessment 1` = percent(reassessment_1, accuracy = 1)
-  ) |>
-  kable()
-```
-
-## Later Reassessments
-
-The longitudinal file also includes reassessment 2 and later columns. Those are useful as a rough trend, but they should be read carefully: later reassessment rows are not a clean participant-level panel in this public extract, and the mix of participants changes as reassessment history gets longer.
-
-For the later windows below, "reassessment 5" means the group with five plan reassessments, comparing its baseline value with its reassessment 5 value. It is a useful descriptive window, but it should not be read as the exact same participants shown in the reassessment 1 chart.
-
-```{r}
-#| label: later-reassessment-trend
-#| fig-cap: "Median direction-adjusted change by reassessment number."
-
-reassessment_cols <- names(participant_longitudinal) |>
-  keep(\(nm) str_detect(nm, "^percentage_reassessment_"))
-
-participant_trend <- participant_longitudinal |>
+reassessment_all <- longitudinal_raw |>
   filter(
-    is.finite(percentage_baseline),
-    direction %in% c("Higher is better", "Lower is better")
+    statecd == "ALL",
+    str_starts(questionnaire, "Participant"),
+    number_of_sf_reassessments == 1
   ) |>
-  pivot_longer(
-    all_of(reassessment_cols),
-    names_to = "reassessment",
-    values_to = "reassessment_value"
+  transmute(
+    report_date = as.Date(rprtdt, "%d/%m/%Y"),
+    cohort = cohort_label(questionnaire),
+    indicator_number = as.integer(indicator_number),
+    outcome = indicator_description,
+    baseline_rate = parse_number(as.character(percentage_t0), na = c("", "NA", "na")),
+    reassessment_rate = parse_number(as.character(percentage_t1), na = c("", "NA", "na"))
   ) |>
+  filter(is.finite(baseline_rate), is.finite(reassessment_rate)) |>
   mutate(
-    reassessment_number = as.integer(str_extract(reassessment, "[0-9]+")),
-    raw_change = reassessment_value - percentage_baseline,
-    direction_adjusted_change = direction_adjust_change(raw_change, direction)
-  ) |>
-  filter(
-    reassessment_number == number_of_plan_reassessments,
-    is.finite(direction_adjusted_change)
+    outcome_short = short_outcome(outcome)
   )
 
-trend_summary <- participant_trend |>
-  group_by(reassessment_number) |>
-  summarise(
-    rows = n(),
-    outcome_cohort_pairs = n_distinct(str_c(cohort_label, indicator_number, sep = "::")),
-    median_change = safe_median(direction_adjusted_change),
-    p25 = quantile(direction_adjusted_change, 0.25, na.rm = TRUE),
-    p75 = quantile(direction_adjusted_change, 0.75, na.rm = TRUE),
-    .groups = "drop"
-  ) |>
-  filter(rows >= 20)
+unmapped_directions <- reassessment_all |>
+  anti_join(direction_lookup, by = c("cohort", "indicator_number"))
+unused_directions <- direction_lookup |>
+  anti_join(reassessment_all, by = c("cohort", "indicator_number"))
+assert_true(
+  nrow(unmapped_directions) == 0 && nrow(unused_directions) == 0,
+  "The participant outcome keys do not match the explicit direction lookup."
+)
 
-if (nrow(trend_summary) > 0) {
-  trend_summary |>
-    ggplot(aes(reassessment_number, median_change)) +
-    geom_hline(yintercept = 0, colour = "grey60") +
-    geom_ribbon(aes(ymin = p25, ymax = p75), fill = "#b7c7a3", alpha = 0.45) +
-    geom_line(colour = "#395f3b", linewidth = 0.8) +
-    geom_point(colour = "#395f3b", size = 2) +
-    scale_x_continuous(breaks = trend_summary$reassessment_number) +
-    scale_y_continuous(labels = percent) +
-    labs(x = "Reassessment number", y = "Direction-adjusted change from baseline")
-} else {
-  tibble(note = "There are not enough later reassessment rows to draw a stable trend.") |>
-    kable()
-}
-```
-
-```{r}
-#| label: later-reassessment-table
-
-trend_summary |>
-  transmute(
-    Reassessment = reassessment_number,
-    Rows = comma(rows),
-    `Outcome/cohort pairs` = outcome_cohort_pairs,
-    `Median adjusted change` = percent(median_change, accuracy = 0.1),
-    `25th percentile` = percent(p25, accuracy = 0.1),
-    `75th percentile` = percent(p75, accuracy = 0.1)
-  ) |>
-  kable()
-```
-
-To make the later reassessment pattern easier to read, the next chart repeats the reassessment 1 idea for two later windows: one around the middle of the available reassessment history, and the latest window with enough comparable outcome rows.
-
-```{r}
-#| label: selected-later-reassessment-summary
-#| fig-cap: "Direction-adjusted change for middle and latest reassessment windows."
-#| fig-width: 10
-#| fig-height: 8
-
-later_windows <- trend_summary |>
-  filter(reassessment_number > 1) |>
-  arrange(reassessment_number)
-
-selected_later_reassessments <- if (nrow(later_windows) > 0) {
-  unique(c(
-    later_windows$reassessment_number[[ceiling(nrow(later_windows) / 2)]],
-    max(later_windows$reassessment_number)
-  ))
-} else {
-  integer()
-}
-
-selected_later_summary <- participant_trend |>
-  filter(reassessment_number %in% selected_later_reassessments) |>
-  mutate(window = str_c("Reassessment ", reassessment_number)) |>
-  group_by(window, reassessment_number, cohort_label, outcome_theme) |>
-  summarise(
-    rows = n(),
-    median_change = safe_median(direction_adjusted_change),
-    p25 = quantile(direction_adjusted_change, 0.25, na.rm = TRUE),
-    p75 = quantile(direction_adjusted_change, 0.75, na.rm = TRUE),
-    .groups = "drop"
-  ) |>
-  filter(is.finite(median_change)) |>
-  mutate(cohort_theme = str_c(cohort_label, ": ", outcome_theme))
-
-if (nrow(selected_later_summary) > 0) {
-  selected_later_summary |>
-    ggplot(aes(fct_reorder(cohort_theme, median_change), median_change)) +
-    geom_hline(yintercept = 0, colour = "grey60") +
-    geom_col(fill = "#7a5c2e") +
-    geom_errorbar(aes(ymin = p25, ymax = p75), width = 0.2, colour = "grey35") +
-    coord_flip() +
-    facet_wrap(~ window, scales = "free_y", ncol = 1) +
-    scale_y_continuous(labels = percent) +
-    labs(x = NULL, y = "Direction-adjusted percentage-point change")
-} else {
-  tibble(note = "There are not enough later reassessment windows to draw selected comparisons.") |>
-    kable()
-}
-```
-
-The detailed table keeps the raw baseline and later reassessment values visible. Positive adjusted changes mean the result moved in the favourable direction after accounting for whether a higher or lower raw percentage is better.
-
-```{r}
-#| label: selected-later-reassessment-table
-
-participant_trend |>
-  filter(reassessment_number %in% selected_later_reassessments) |>
-  mutate(abs_change = abs(direction_adjusted_change)) |>
-  group_by(reassessment_number) |>
-  slice_max(abs_change, n = 12, with_ties = FALSE) |>
-  ungroup() |>
-  arrange(reassessment_number, desc(abs_change)) |>
-  transmute(
-    Reassessment = reassessment_number,
-    Cohort = as.character(cohort_label),
-    Theme = outcome_theme,
-    Outcome = indicator_description,
-    Direction = direction,
-    Baseline = percent(percentage_baseline, accuracy = 1),
-    `Selected reassessment` = percent(reassessment_value, accuracy = 1),
-    `Raw change` = percent(raw_change, accuracy = 0.1),
-    `Adjusted change` = percent(direction_adjusted_change, accuracy = 0.1)
-  ) |>
-  kable()
-```
-
-The later-reassessment pattern is best read as directional context, not as a precise individual trajectory. Still, it helps separate the first question from the bigger spend question: the public data does show reported outcome movement after entry, even before we try to link those changes to budgets, service markets or regional access.
-
-## Family And Carer Note
-
-Family and carer outcomes are part of the public outcomes files, but they answer a different question. They are about the circumstances of the family or carer around the participant, not the participant's own outcome level. For this reason, they sit beside the participant story rather than inside it.
-
-```{r}
-#| label: family-carer-summary
-
-family_reassessment1 <- family_longitudinal |>
-  filter(number_of_plan_reassessments == 1) |>
-  transmute(
-    cohort_label,
-    outcome_theme,
-    indicator_description,
-    direction,
-    baseline = percentage_baseline,
-    reassessment_1 = percentage_reassessment_1,
-    raw_change = reassessment_1 - baseline,
-    direction_adjusted_change = direction_adjust_change(raw_change, direction)
+reassessment_all <- reassessment_all |>
+  left_join(direction_lookup, by = c("cohort", "indicator_number")) |>
+  mutate(
+    direction = case_match(
+      direction_class,
+      "Favourable" ~ 1,
+      "Adverse" ~ -1,
+      "Ambiguous" ~ NA_real_
+    ),
+    raw_change = reassessment_rate - baseline_rate,
+    adjusted_change = raw_change * direction
   )
 
-family_summary <- family_reassessment1 |>
-  group_by(cohort_label) |>
-  summarise(
-    comparable_outcomes = sum(is.finite(direction_adjusted_change)),
-    median_adjusted_change = safe_median(direction_adjusted_change),
-    direct_improvement_items = sum(is.na(baseline) & is.finite(reassessment_1)),
-    median_direct_improvement = safe_median(reassessment_1[is.na(baseline) & is.finite(reassessment_1)]),
-    .groups = "drop"
-  )
+reassessment_one <- reassessment_all |>
+  filter(is.finite(direction))
 
-family_summary |>
-  transmute(
-    Cohort = as.character(cohort_label),
-    `Comparable outcomes` = comparable_outcomes,
-    `Median adjusted change` = format_optional_percent(median_adjusted_change, accuracy = 0.1),
-    `Direct improvement items` = direct_improvement_items,
-    `Median direct improvement response` = format_optional_percent(median_direct_improvement, accuracy = 1)
+expected_cohorts <- c("Early childhood", "School age", "Young people", "Adults")
+assert_true(identical(sort(unique(baseline$cohort)), sort(expected_cohorts)), "Unexpected participant cohorts in baseline outcomes.")
+assert_true(identical(sort(unique(reassessment_one$cohort)), sort(expected_cohorts)), "Unexpected participant cohorts in longitudinal outcomes.")
+assert_true(nrow(baseline) == 42, "Expected 42 national participant baseline outcomes.")
+assert_true(nrow(reassessment_all) == 42, "Expected 42 national participant outcomes at first reassessment.")
+assert_true(
+  !anyDuplicated(baseline[c("cohort", "indicator_number", "outcome")]),
+  "Baseline outcome keys are not unique."
+)
+assert_true(
+  !anyDuplicated(reassessment_all[c("cohort", "indicator_number", "outcome")]),
+  "Longitudinal outcome keys are not unique."
+)
+assert_true(!anyDuplicated(baseline[c("cohort", "indicator_number")]), "Baseline cohort and indicator-number keys are not unique.")
+assert_true(!anyDuplicated(reassessment_all[c("cohort", "indicator_number")]), "Longitudinal cohort and indicator-number keys are not unique.")
+baseline_keys <- baseline |>
+  transmute(key = str_c(cohort, indicator_number, sep = "::")) |>
+  pull(key) |>
+  sort()
+reassessment_keys <- reassessment_all |>
+  transmute(key = str_c(cohort, indicator_number, sep = "::")) |>
+  pull(key) |>
+  sort()
+assert_true(identical(baseline_keys, reassessment_keys), "Baseline and longitudinal cohort/indicator keys do not match.")
+assert_true(sum(str_detect(str_to_lower(reassessment_all$outcome), "concerns in 6 or more")) == 1, "The development-concerns indicator changed.")
+assert_true(sum(str_detect(str_to_lower(reassessment_all$outcome), "unable to do a course")) == 1, "The training-access indicator changed.")
+assert_true(sum(str_detect(str_to_lower(reassessment_all$outcome), "no friends other than")) == 2, "The no-friends indicators changed.")
+assert_true(sum(str_detect(str_to_lower(reassessment_all$outcome), "want more choice and control")) == 2, "The ambiguous choice indicators changed.")
+assert_true(nrow(reassessment_one) == 40, "Expected 40 direction-classified outcomes at first reassessment.")
+assert_true(all(baseline$report_date == as.Date("2026-06-30")), "Baseline outcomes are not current to 30 June 2026.")
+assert_true(all(reassessment_one$report_date == as.Date("2026-06-30")), "Longitudinal outcomes are not current to 30 June 2026.")
+assert_true(all(between(baseline$baseline_rate, 0, 1)), "Baseline percentages fall outside 0 to 1.")
+assert_true(all(between(reassessment_one$baseline_rate, 0, 1)), "Longitudinal baseline percentages fall outside 0 to 1.")
+assert_true(all(between(reassessment_one$reassessment_rate, 0, 1)), "Reassessment percentages fall outside 0 to 1.")
+
+cohort_summary <- reassessment_one |>
+  group_by(cohort) |>
+  summarise(
+    outcomes = n(),
+    median_change = median(adjusted_change),
+    improved = sum(adjusted_change > 0),
+    unchanged = sum(adjusted_change == 0),
+    worsened = sum(adjusted_change < 0),
+    .groups = "drop"
   ) |>
-  kable()
+  mutate(cohort = factor(cohort, levels = expected_cohorts)) |>
+  arrange(cohort)
+
+early_childhood_summary <- cohort_summary |> filter(cohort == "Early childhood")
+adult_summary <- cohort_summary |> filter(cohort == "Adults")
+largest_gain <- reassessment_one |> slice_max(adjusted_change, n = 1, with_ties = FALSE)
+largest_fall <- reassessment_one |> slice_min(adjusted_change, n = 1, with_ties = FALSE)
 ```
 
-The family and carer rows are useful, especially for questions about informal care, work, confidence, health and service access. They should not be blended with participant rows when the main question is whether participant outcomes themselves changed.
+The public NDIS outcomes data tells a more restrained story than either “outcomes improved” or “nothing changed”. After one plan reassessment, most published indicators move by only a few percentage points. The clearest gains are concentrated among children before school age—especially communication and friendships—while the typical adult indicator changes by just `r number(100 * adult_summary$median_change, accuracy = 1)` percentage point.
 
-## Caveats
+That distinction matters. These files contain aggregated survey percentages, not participant-level records, comparison groups or sample sizes. They can show where reported outcomes moved; they cannot establish that the NDIS caused the movement.
 
-- These are aggregate public survey rows, not participant-level records.
-- The reassessment comparisons are descriptive. They do not prove causation.
-- Later reassessment rows may reflect a different participant mix from earlier reassessment rows.
-- Direction-adjusting outcomes helps readability, but it does not make all indicators equally important.
-- Some items ask whether the NDIS helped or improved something. Those are reassessment responses, not true baseline-to-change measures.
-- Spend, provider access and regional service-market questions are deliberately left out of this simplified version.
+## Start with the right baseline
+
+The baseline file is often tempting to describe as “current outcomes”. It is not. It records outcomes **when participants entered the Scheme**, for people represented in the June 2026 extract. It is a starting-point profile.
+
+Among adults, the entry picture separates relatively common measures of home and day-to-day choice from much lower economic and community participation. Only 23% had a paid job, 10% volunteered and 9% participated in education, training or skill development at baseline.
+
+```{r}
+#| label: adult-baseline
+#| fig-cap: "Selected outcomes for adults at NDIS entry, in the data current to 30 June 2026. These are baseline—not current—levels."
+#| fig-alt: "Dot chart of nine adult outcomes at NDIS entry. Choosing daily activities, choosing supports, and feeling safe at home are relatively common, while paid work, volunteering, and education or training are below one quarter."
+#| fig-width: 8
+#| fig-height: 5.8
+
+adult_baseline_patterns <- c(
+  "choose what they do each day",
+  "choose who supports them",
+  "feel safe or very safe",
+  "did not have any difficulties accessing health services",
+  "rate their health as good",
+  "actively involved in a community",
+  "have a paid job",
+  "participate in education, training",
+  "volunteer"
+)
+
+adult_baseline <- baseline |>
+  filter(cohort == "Adults") |>
+  filter(str_detect(str_to_lower(outcome), str_c(adult_baseline_patterns, collapse = "|"))) |>
+  mutate(
+    outcome_short = short_outcome(outcome),
+    outcome_short = fct_reorder(outcome_short, baseline_rate)
+  )
+
+assert_true(nrow(adult_baseline) == length(adult_baseline_patterns), "The selected adult baseline outcomes changed.")
+
+ggplot(adult_baseline, aes(baseline_rate, outcome_short)) +
+  geom_segment(aes(x = 0, xend = baseline_rate, yend = outcome_short), colour = "grey80", linewidth = 0.8) +
+  geom_point(size = 3, colour = "#246b8e") +
+  geom_text(aes(label = percent(baseline_rate, accuracy = 1)), hjust = -0.35, size = 3.5) +
+  scale_x_continuous(labels = percent, limits = c(0, 0.85), expand = expansion(mult = c(0, 0.03))) +
+  labs(x = "Share at Scheme entry", y = NULL)
+```
+
+## Most first-reassessment changes are small
+
+For each outcome, I compare the baseline percentage with the first reassessment percentage for the group recorded as having one reassessment. Three clearly negative indicator types—broad development concerns, inability to access wanted training, and having no friends beyond family or paid staff—are reversed so that positive always means movement in a favourable direction. The two “want more choice and control” indicators are excluded because their direction is ambiguous: wanting more choice can reveal unmet need, greater agency, or both.
+
+Across the 40 direction-classified participant indicators, most movements cluster close to zero. Early childhood has `r early_childhood_summary$improved` of `r early_childhood_summary$outcomes` indicators moving favourably, but it also contains the largest adverse movement. Adult outcomes are flatter: `r adult_summary$improved` improve, `r adult_summary$unchanged` are unchanged and none worsen at the published one-percentage-point precision.
+
+```{r}
+#| label: reassessment-distribution
+#| fig-cap: "Direction-adjusted change from baseline to first reassessment. Each point is one published outcome; positive values indicate favourable movement. Red bars are medians across indicators, not participant-level effects."
+#| fig-alt: "Dot plot of 40 direction-classified outcome changes by age cohort. Most cluster between zero and three percentage points. Early childhood contains the two largest gains and the largest decline."
+#| fig-width: 8
+#| fig-height: 5.2
+
+plot_reassessment <- reassessment_one |>
+  mutate(cohort = factor(cohort, levels = expected_cohorts))
+
+ggplot(plot_reassessment, aes(cohort, adjusted_change)) +
+  geom_hline(yintercept = 0, colour = "grey55", linewidth = 0.6) +
+  geom_jitter(width = 0.10, height = 0, alpha = 0.55, size = 2.2, colour = "#246b8e", seed = 2026) +
+  stat_summary(fun = median, geom = "crossbar", width = 0.48, linewidth = 0.7, colour = "#9b3f2f") +
+  scale_y_continuous(labels = label_percent(accuracy = 1), breaks = seq(-0.05, 0.15, 0.05)) +
+  labs(x = NULL, y = "Favourable change from baseline")
+```
+
+## The larger movements are concentrated
+
+The largest favourable change is `r largest_gain$outcome_short` for `r str_to_lower(largest_gain$cohort)`, up `r number(100 * largest_gain$adjusted_change, accuracy = 1)` percentage points. The largest adverse change is `r largest_fall$outcome_short` for `r str_to_lower(largest_fall$cohort)`, down `r number(100 * abs(largest_fall$adjusted_change), accuracy = 1)` percentage points after accounting for direction.
+
+The chart makes the concentration visible: the two double-digit gains both relate to children before school age. Adult employment, education and volunteering do not show comparable movement after one reassessment.
+
+```{r}
+#| label: largest-movements
+#| fig-cap: "The ten largest absolute movements from baseline to first reassessment. Positive values indicate favourable movement."
+#| fig-alt: "Diverging dot chart of the ten largest outcome movements. Communication and friendships among young children have the largest gains, while broad early-childhood development concerns have the largest adverse movement."
+#| fig-width: 8
+#| fig-height: 6.2
+
+largest_movements <- reassessment_one |>
+  slice_max(abs(adjusted_change), n = 10, with_ties = FALSE) |>
+  mutate(
+    label = str_c(cohort, ": ", outcome_short),
+    label = fct_reorder(label, adjusted_change),
+    direction_label = if_else(adjusted_change >= 0, "Favourable", "Adverse")
+  )
+
+ggplot(largest_movements, aes(adjusted_change, label, colour = direction_label)) +
+  geom_vline(xintercept = 0, colour = "grey65") +
+  geom_segment(aes(x = 0, xend = adjusted_change, yend = label), linewidth = 0.9) +
+  geom_point(size = 3) +
+  geom_text(
+    aes(label = percent(adjusted_change, accuracy = 1)),
+    hjust = if_else(largest_movements$adjusted_change >= 0, -0.25, 1.25),
+    show.legend = FALSE,
+    size = 3.4
+  ) +
+  scale_x_continuous(labels = percent, limits = c(-0.09, 0.17)) +
+  scale_colour_manual(values = c(Favourable = "#16735c", Adverse = "#b0433c")) +
+  labs(x = "Direction-adjusted change", y = NULL, colour = NULL)
+```
+
+## What the data does—and does not—say
+
+These are published aggregate movements, not participant-level effect estimates. They are not uniformly large and they are not spread evenly across ages or domains. The largest favourable movements are in early-childhood communication and friendship or social connection, while broad development concerns move adversely. For adults, the indicators tied to work, learning and community participation remain low at entry and generally change little after one reassessment.
+
+Three limits should shape the interpretation:
+
+- The extract has no participant-level records or sample counts, so uncertainty cannot be calculated.
+- The first-reassessment comparison describes the respondents in that published group; it is not a randomised or matched counterfactual.
+- Percentages are rounded to whole percentage points. A reported zero change may conceal a smaller movement.
+
+That leaves a useful, narrower conclusion: the public data supports a story of **concentrated early-childhood gains alongside broadly modest movement elsewhere**, not a single verdict on whether “NDIS outcomes” rose or fell.
+
+::: {.callout-note collapse="true" title="Sources and reproducibility"}
+
+The analysis uses the NDIA's [baseline and longitudinal participant outcomes datasets](https://dataresearch.ndis.gov.au/datasets/participant-datasets) and their data-rules documents, all current to 30 June 2026. The source files are pinned by size and SHA-256 checksum in `sources.csv`; set `BLOG_REFRESH_DATA=true` to force a fresh download and checksum validation. In the registry, `release_date` records the downloadable asset's Last-Modified date.
+
+```{r}
+#| label: source-manifest
+
+source_manifest |>
+  transmute(
+    source = dataset,
+    source_revision_date = release_date,
+    coverage_end,
+    file = local_file,
+    bytes = comma(bytes),
+    sha256_prefix = substr(sha256, 1, 12)
+  ) |>
+  kable(col.names = c("Source", "Source/revision date", "Coverage end", "Cached file", "Bytes", "SHA-256 prefix"))
+```
+
+:::

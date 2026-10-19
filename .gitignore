@@ -2,7 +2,6 @@
 Thumbs.db
 /.quarto/
 /_site/
-/_freeze/
 /posts/**/data/
 /posts/**/data-raw/
 

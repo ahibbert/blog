@@ -73,7 +73,7 @@ a:hover {
   gap: 0.65rem;
   color: var(--ink);
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 0.94rem;
   padding: 0;
   text-decoration: none;
   white-space: nowrap;
@@ -167,7 +167,7 @@ body:has(.hero) #quarto-document-content {
 
 body:has(.hero) .hero,
 body:has(.hero) .updates-band,
-body:has(.hero) #post-listing {
+body:has(.hero) #listing-post-listing {
   width: min(100%, 1080px);
   margin-inline: auto;
 }
@@ -233,8 +233,8 @@ p {
 
 h1 {
   margin: 0;
-  max-width: 11ch;
-  font-size: clamp(2.65rem, 7vw, 5.8rem);
+  max-width: 12ch;
+  font-size: clamp(2.65rem, 6vw, 5rem);
   line-height: 0.95;
   letter-spacing: 0;
 }
@@ -417,22 +417,41 @@ h3 {
   background: #f6efe1;
 }
 
-#post-listing {
+#listing-post-listing {
   padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 3rem) clamp(3rem, 7vw, 5rem);
   background: #f6efe1;
 }
 
-#post-listing .quarto-listing {
+#listing-post-listing .quarto-listing {
   max-width: 1100px;
 }
 
 .quarto-listing-default .quarto-post {
+  align-items: flex-start;
   border: 1px solid var(--line);
   border-radius: 10px;
   margin-bottom: 0.8rem;
   padding: 1rem;
   background: var(--surface);
   box-shadow: 0 12px 26px rgba(35, 31, 28, 0.06);
+}
+
+.quarto-listing-default .quarto-post .thumbnail {
+  max-width: 22rem;
+}
+
+.quarto-listing-default .quarto-post .thumbnail .card-img-top {
+  margin: 0;
+}
+
+.quarto-listing-default .quarto-post .thumbnail-image {
+  display: block;
+  width: 100%;
+  height: clamp(8rem, 12vw, 12rem);
+  margin: 0;
+  object-fit: contain;
+  object-position: center;
+  background: #fff;
 }
 
 .quarto-listing-default .listing-title {
@@ -696,5 +715,15 @@ pre,
 
   .project-card {
     min-height: auto;
+  }
+
+  .quarto-listing-default .quarto-post .thumbnail {
+    width: 100%;
+    max-width: none;
+  }
+
+  .quarto-listing-default .quarto-post .thumbnail-image {
+    height: auto;
+    max-height: 14rem;
   }
 }

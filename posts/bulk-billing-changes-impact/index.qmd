@@ -317,25 +317,39 @@ working_age_model_data <- working_age_monthly |>
     calendar_month = factor(month(month))
   )
 
-working_age_visit_model_fit <- lm(
-  log(visits) ~ time + post + post_time + calendar_month,
-  data = working_age_model_data
-)
-working_age_visit_covariance <- vcov_hac(working_age_visit_model_fit)
-working_age_visit_step <- tibble(
-  estimate = coef(working_age_visit_model_fit)[["post"]],
-  std_error = sqrt(working_age_visit_covariance["post", "post"])
-) |>
-  mutate(
+fit_working_age_visit_model <- function(formula, specification) {
+  model <- lm(formula, data = working_age_model_data)
+  covariance <- vcov_hac(model)
+  estimate <- coef(model)[["post"]]
+  std_error <- sqrt(covariance["post", "post"])
+  tibble(
+    specification,
+    estimate,
+    std_error,
     change_percent = 100 * (exp(estimate) - 1),
     lower_percent = 100 * (exp(estimate - 1.96 * std_error) - 1),
     upper_percent = 100 * (exp(estimate + 1.96 * std_error) - 1)
   )
+}
+
+working_age_visit_models <- bind_rows(
+  fit_working_age_visit_model(
+    log(visits) ~ time + post + post_time + calendar_month,
+    "Step and post-policy slope (primary)"
+  ),
+  fit_working_age_visit_model(
+    log(visits) ~ time + post + calendar_month,
+    "Step only (sensitivity)"
+  )
+)
+working_age_visit_step <- slice(working_age_visit_models, 1)
 
 working_age_visit_comparison <- working_age_monthly |>
   filter(
     month %in% as.Date(c(
+      "2025-01-01", "2025-02-01",
       "2025-03-01", "2025-04-01", "2025-05-01", "2025-06-01",
+      "2026-01-01", "2026-02-01",
       "2026-03-01", "2026-04-01", "2026-05-01", "2026-06-01"
     ))
   ) |>
@@ -449,6 +463,7 @@ patient_cost_national <- national_quarterly |>
   group_by(period) |>
   summarise(
     services = sum(services),
+    bulk_billed_services = sum(bulk_billed_services),
     patient_billed_services = sum(patient_billed_services),
     patient_contributions = sum(patient_contributions),
     average_per_service = patient_contributions / services,
@@ -458,6 +473,8 @@ patient_cost_national <- national_quarterly |>
 
 patient_cost_change <- patient_cost_national |>
   summarise(
+    bulk_billed_service_change = bulk_billed_services[period == "After: Mar + Jun 2026"] -
+      bulk_billed_services[period == "Before: Mar + Jun 2025"],
     contribution_change = patient_contributions[period == "After: Mar + Jun 2026"] -
       patient_contributions[period == "Before: Mar + Jun 2025"],
     average_change = average_per_service[period == "After: Mar + Jun 2026"] -
@@ -532,14 +549,14 @@ state_patient_costs <- sa3_raw |>
 ::: {.callout-note title="Executive summary"}
 
 - Australia's GP bulk-billing rate rose from `r percent(june_2025_rate, accuracy = 0.1)` to `r percent(latest_rate, accuracy = 0.1)` in the year to June 2026.
-- For 16–64-year-olds—the group most affected by the expanded incentive—it rose from `r percent(working_age_rates$rate_2025_06_01, accuracy = 0.1)` to `r percent(working_age_rates$rate_2026_06_01, accuracy = 0.1)`.
-- Working-age visit volumes were only `r percent(working_age_visit_change, accuracy = 0.1)` higher across March–June, while all-age patient contributions fell overall but not evenly.
+- For 16–64-year-olds it rose from `r percent(working_age_rates$rate_2025_06_01, accuracy = 0.1)` to `r percent(working_age_rates$rate_2026_06_01, accuracy = 0.1)`, while reconstructed visit volumes were `r percent(working_age_visit_change, accuracy = 0.1)` higher across January–June.
+- Across all ages, `r number(patient_cost_change$bulk_billed_service_change / 1e6, accuracy = 0.1)` million more GP services were bulk billed and recorded patient contributions were `r dollar(abs(patient_cost_change$contribution_change) / 1e6, suffix = "m", accuracy = 0.1)` lower across the first six months of 2026 than a year earlier.
 
 :::
 
 The policy period produced a clear change in **how GP care was billed**. The evidence for a matching change in **how much care people received** is much weaker.
 
-The comparisons below start in 2023, after the acute COVID-era disruption. March to June 2026 are the first clean post-policy months available; December 2025 is treated as a transition quarter. [Methods, caveats, detailed tables and the source audit are in the expandable appendix.](#appendix)
+The comparisons below start in 2023, after the acute COVID-era disruption. January–June 2026 provides the consistent six-month post-policy window used for the year-on-year access and cost comparisons; December 2025 is excluded from the quarterly area model as a transition quarter. [Methods, caveats, detailed tables and the source audit are in the expandable appendix.](#appendix)
 
 ## 1. National bulk-billing rates rose from `r percent(june_2025_rate, accuracy = 0.1)` to `r percent(latest_rate, accuracy = 0.1)`
 
@@ -571,7 +588,7 @@ ggplot(national_monthly, aes(month, bulk_billing_rate)) +
   )
 ```
 
-A simple interrupted time-series model, controlling for the 2023–26 trend and calendar month, estimates an immediate `r number(100 * step_estimate$estimate, accuracy = 0.1)`-percentage-point step (HAC 95% interval `r number(100 * step_estimate$lower, accuracy = 0.1)` to `r number(100 * step_estimate$upper, accuracy = 0.1)`). That supports a break in the series' timing, not proof that the policy was the only cause.
+A descriptive interrupted time-series model, controlling for the 2023–26 trend and calendar month, estimates an immediate `r number(100 * step_estimate$estimate, accuracy = 0.1)`-percentage-point step (HAC 95% interval `r number(100 * step_estimate$lower, accuracy = 0.1)` to `r number(100 * step_estimate$upper, accuracy = 0.1)`). There are only eight post-policy monthly observations. The estimate marks a break in timing; it is not proof that the policy was the only cause.
 
 ## 2. Bulk billing for ages 16–64 rose from `r percent(working_age_rates$rate_2025_06_01, accuracy = 0.1)` to `r percent(working_age_rates$rate_2026_06_01, accuracy = 0.1)`
 
@@ -605,7 +622,7 @@ age_change |>
 
 From here, the age-specific analysis focuses on 16–64-year-olds. Children and older Australians were already covered by earlier bulk-billing incentives. The 16–64 band is still broader than the newly eligible population because it includes concession-card holders who were already eligible.
 
-## 3. The rise was nationwide—and strongest in more disadvantaged areas
+## 3. The rise was nationwide and smallest in the most advantaged areas
 
 Among 16–64-year-olds, the bulk-billing rate rose in every state and territory. The increase ranged from `r number(min(state_working_age_rates$change_pp), accuracy = 0.1)` percentage points in the ACT to `r number(max(state_working_age_rates$change_pp), accuracy = 0.1)` points in the Northern Territory.
 
@@ -631,7 +648,7 @@ state_working_age_rates |>
   )
 ```
 
-The socioeconomic pattern also points in the intended direction. All-age rates were highest in the most disadvantaged areas before the change and rose across every SEIFA quintile. The most advantaged quintile recorded the smallest increase, at `r number(filter(seifa_change, str_detect(group, "most advantaged"))$change_pp, accuracy = 0.1)` points.
+All-age rates were highest in the most disadvantaged areas before the change and rose across every SEIFA quintile. The changes were not monotonic by disadvantage: quintiles 2 and 3 rose most, while the most advantaged quintile recorded the smallest increase, at `r number(filter(seifa_change, str_detect(group, "most advantaged"))$change_pp, accuracy = 0.1)` points.
 
 ```{r}
 #| label: fig-seifa-rates
@@ -657,14 +674,14 @@ seifa_change |>
 
 SEIFA describes the area where a service was delivered, not the circumstances of each patient. It is useful distributional context, not a causal test.
 
-## 4. Working-age visits were only `r percent(working_age_visit_change, accuracy = 0.1)` higher across the clean post-policy months
+## 4. Working-age visits were `r percent(working_age_visit_change, accuracy = 0.1)` higher across January–June
 
-The working-age billing shift did not translate into a clear, sustained rise in claimed visits. Across March–June 2026, reconstructed 16–64 visit volumes were `r percent(working_age_visit_change, accuracy = 0.1)` above the same months in 2025—but the monthly pattern swung from growth to decline and back again.
+The working-age billing shift did not translate into a clear, sustained rise in claimed visits. Across January–June 2026, reconstructed 16–64 visit volumes were `r percent(working_age_visit_change, accuracy = 0.1)` above the same months in 2025. The monthly pattern moved between increases and declines.
 
 ```{r}
 #| label: fig-working-age-visits
 #| fig-cap: "Source: AIHW monthly GP bulk-billing data. Total visits for ages 16–64 are reconstructed as bulk-billed services divided by the published bulk-billing rate. The final three months are preliminary."
-#| fig-alt: "Bar chart of year-on-year changes in working-age GP visits for March to June 2026. March, April and June were higher, May was lower, and the four months together were 1.3 per cent higher."
+#| fig-alt: "Bar chart of year-on-year changes in reconstructed working-age GP visits for January to June 2026. The six months together were approximately flat."
 #| fig-width: 8
 #| fig-height: 4.8
 
@@ -679,21 +696,29 @@ working_age_visit_comparison |>
   scale_fill_manual(values = c(`FALSE` = "#77838D", `TRUE` = "#245A73")) +
   scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(-0.065, 0.07)) +
   labs(
-    title = paste0("Working-age visits were ", percent(working_age_visit_change, accuracy = 0.1), " higher across March-June"),
+    title = paste0("Working-age visits were ", percent(working_age_visit_change, accuracy = 0.1), " higher across January-June"),
     subtitle = "Change from the same month in 2025, ages 16-64",
     x = NULL, y = NULL
   )
 ```
 
-The simple post-COVID time-series check is similarly inconclusive. Controlling for a linear trend and calendar month from January 2023, it estimates an immediate `r percent(working_age_visit_step$change_percent / 100, accuracy = 0.1)` shift in working-age visits, with a 95% interval from `r percent(working_age_visit_step$lower_percent / 100, accuracy = 0.1)` to `r percent(working_age_visit_step$upper_percent / 100, accuracy = 0.1)`. The area-level sensitivity check also finds no clear relative visit gain in places with more scope to switch billing methods.
+The post-COVID time-series check is similarly inconclusive. The primary specification estimates an immediate `r percent(working_age_visit_step$change_percent / 100, accuracy = 0.1)` shift in working-age visits, with a 95% interval from `r percent(working_age_visit_step$lower_percent / 100, accuracy = 0.1)` to `r percent(working_age_visit_step$upper_percent / 100, accuracy = 0.1)`. A simpler step-only specification reaches the same broad conclusion, and the area-level check finds no clear relative visit gain in places with more scope to switch billing methods. With only eight post-policy months, these models are supporting checks rather than the headline evidence.
 
 This does not mean access did not improve. Claims cannot show whether waiting times shortened, unmet need fell or continuity improved. It means the available volume evidence does not yet show a decisive access response.
 
-## 5. Patients paid less overall—but the relief was uneven
+## 5. Recorded patient contributions were lower—but the pattern was uneven
 
-Across the March and June quarters, total patient contributions fell by `r dollar(abs(patient_cost_change$contribution_change) / 1e6, suffix = "m", accuracy = 0.1)` compared with the same quarters in 2025. Average patient contributions across **all** claimed GP services fell from `r dollar(filter(patient_cost_national, str_starts(period, "Before"))$average_per_service, accuracy = 0.01)` to `r dollar(filter(patient_cost_national, str_starts(period, "After"))$average_per_service, accuracy = 0.01)`.
+::: {.callout-important title="3.5 million more GP services were bulk billed"}
 
-But that relief was not evenly distributed. When SA3s are grouped by their pre-policy bulk-billing rate, the average fell in four of five groups—and rose slightly in the group that began with the lowest bulk-billing rates and highest patient costs.
+Across January–June 2026, `r number(patient_cost_change$bulk_billed_service_change / 1e6, accuracy = 0.1)` million more GP services were bulk billed than in the same six months of 2025. Recorded patient contributions were `r dollar(abs(patient_cost_change$contribution_change) / 1e6, suffix = "m", accuracy = 0.1)` lower.
+
+These are observed all-age changes, not estimates of the policy's causal effect. The total number and mix of claimed services also changed.
+
+:::
+
+Across the March and June quarters, recorded patient contributions were `r dollar(abs(patient_cost_change$contribution_change) / 1e6, suffix = "m", accuracy = 0.1)` lower than in the same quarters in 2025. Average recorded contributions across **all** claimed GP services fell from `r dollar(filter(patient_cost_national, str_starts(period, "Before"))$average_per_service, accuracy = 0.01)` to `r dollar(filter(patient_cost_national, str_starts(period, "After"))$average_per_service, accuracy = 0.01)`.
+
+The pattern was not evenly distributed. When SA3s are grouped by their pre-policy bulk-billing rate, the average fell in four of five groups and rose slightly in the group that began with the lowest bulk-billing rates and highest patient costs.
 
 ```{r}
 #| label: fig-patient-costs-area
@@ -716,7 +741,7 @@ patient_cost_by_area_group |>
   ) +
   scale_x_continuous(labels = dollar_format(accuracy = 1), limits = c(0, 25), expand = expansion(mult = c(0, 0.04))) +
   labs(
-    title = "Patient costs fell in four of five area groups",
+    title = "Average recorded contributions fell in four of five area groups",
     subtitle = "Average contribution per GP service; before (grey) and after (orange)",
     x = NULL, y = NULL
   )
@@ -728,7 +753,7 @@ There is another important split: among the visits that were still patient bille
 
 - **Billing:** the policy period coincided with a large, nationwide rise in bulk billing, concentrated among 16–64-year-olds.
 - **Access:** working-age visit volumes were only modestly higher and inconsistent month to month; the models do not show a decisive increase.
-- **Cost:** patients paid less in aggregate, but the remaining patient-billed visits became more expensive and relief did not reach every area equally.
+- **Cost:** `r number(patient_cost_change$bulk_billed_service_change / 1e6, accuracy = 0.1)` million more services were bulk billed and recorded patient contributions were `r dollar(abs(patient_cost_change$contribution_change) / 1e6, suffix = "m", accuracy = 0.1)` lower, but remaining patient-billed visits became more expensive on average.
 
 ## Appendix {#appendix}
 
@@ -741,6 +766,7 @@ There is another important split: among the visits that were still patient bille
 - AIHW marks April–June 2026 as preliminary. Results may be revised.
 - Claims measure delivered services. They cannot identify waiting time, unmet need, clinical need, provider supply or continuity of care.
 - The policy began on 1 November 2025. December 2025 mixes pre- and post-policy months, so the quarterly model excludes it.
+- Working-age visits are approximate. The public monthly workbook does not expose the age-specific denominator directly, so visits are reconstructed as bulk-billed services divided by a published rate rounded to three decimal places.
 - These are descriptive and associational comparisons. Other events at the same time may contribute to the observed changes.
 
 :::
@@ -837,7 +863,22 @@ state_patient_costs |>
 
 ::: {.callout-note collapse="true" title="Models and sensitivity checks"}
 
-The national billing-rate and working-age visit models cover January 2023 to June 2026. Each includes linear time, a November 2025 level indicator, a post-policy slope and calendar-month fixed effects. Confidence intervals use a Bartlett-kernel heteroskedasticity-and-autocorrelation-consistent covariance matrix with the automatic Newey–West lag rule. These identify a time-series break, not a causal effect.
+The national billing-rate and working-age visit models cover January 2023 to June 2026, leaving eight post-policy months. The primary specifications include linear time, a November 2025 level indicator, a post-policy slope and calendar-month fixed effects. The visit sensitivity removes the post-policy slope. Confidence intervals use a Bartlett-kernel heteroskedasticity-and-autocorrelation-consistent covariance matrix with the automatic Newey–West lag rule. The short post window and number of estimated terms make these supporting checks only; they do not identify a causal effect.
+
+```{r}
+#| label: tbl-working-age-models
+
+working_age_visit_models |>
+  transmute(
+    Specification = specification,
+    `Immediate change` = percent(change_percent / 100, accuracy = 0.1),
+    `HAC 95% interval` = paste0(
+      percent(lower_percent / 100, accuracy = 0.1), " to ",
+      percent(upper_percent / 100, accuracy = 0.1)
+    )
+  ) |>
+  kable(align = c("l", "r", "r"))
+```
 
 The area-level model is:
 

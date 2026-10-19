@@ -2,7 +2,7 @@
 title: "Sydney's Housing Weakness Was Deepest in Expensive Houses"
 description: "Sydney's established-house median fell 4.0% in the June quarter, versus 1.8% for attached dwellings. Higher-value houses had fallen further from peak; the rest was less weak, not rising."
 date: "2026-06-11"
-date-modified: "2026-10-13"
+date-modified: "2026-10-20"
 categories: [housing, cost-of-living, australia, property-prices, abs]
 author: "Aydin"
 ---
@@ -17,6 +17,7 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(stringr)
+library(forcats)
 library(scales)
 library(knitr)
 
@@ -175,14 +176,20 @@ parse_abs_transfers <- function(path) {
 
 stock <- parse_abs_stock(source_path("abs_total_value_dwellings"))
 transfers <- parse_abs_transfers(source_path("abs_dwelling_transfers"))
+cotality_figures <- read_csv("cotality-published-figures.csv", show_col_types = FALSE) |>
+  mutate(
+    publication_date = as.Date(publication_date),
+    coverage_end = as.Date(coverage_end),
+    retrieved_date = as.Date(retrieved_date)
+  )
 
+latest_quarter <- as.Date("2026-06-01")
+previous_quarter <- as.Date("2026-03-01")
 expected_states <- c(
   "New South Wales", "Victoria", "Queensland", "South Australia",
   "Western Australia", "Tasmania", "Northern Territory",
   "Australian Capital Territory", "Australia"
 )
-latest_quarter <- as.Date("2026-06-01")
-previous_quarter <- as.Date("2026-03-01")
 expected_transfer_geographies <- c(
   "Sydney", "Rest of NSW", "Melbourne", "Rest of Vic.",
   "Brisbane", "Rest of Qld.", "Adelaide", "Rest of SA",
@@ -243,6 +250,25 @@ assert_true(
   "State stock values do not reconcile to Australia."
 )
 
+state_price_change <- stock |>
+  filter(
+    measure == "Mean dwelling price",
+    quarter_date %in% c(previous_quarter, latest_quarter)
+  ) |>
+  group_by(state) |>
+  arrange(quarter_date, .by_group = TRUE) |>
+  summarise(
+    previous_price = first(value),
+    latest_price = last(value),
+    change = latest_price / previous_price - 1,
+    .groups = "drop"
+  )
+assert_true(nrow(state_price_change) == 9 && all(is.finite(state_price_change$change)), "State mean-price changes are incomplete.")
+falling_jurisdictions <- state_price_change |>
+  filter(state != "Australia", change < 0) |>
+  summarise(value = n()) |>
+  pull(value)
+
 focus_geographies <- c("Sydney", "Rest of NSW", "Melbourne", "Rest of Vic.")
 focus_transfer_source <- transfers |>
   filter(
@@ -287,37 +313,142 @@ latest_transfer_counts <- transfers |>
   filter(measure == "Number of transfers", quarter_date == latest_quarter)
 assert_true(nrow(latest_transfer_counts) == 30 && all(latest_transfer_counts$value >= 0), "Latest transfer counts are incomplete or invalid.")
 
-# Published Cotality September 2026 chart-pack results, data through August.
-# Lower-quartile declines are derived from the published upper-quartile decline and upper-minus-lower gap.
-tier_declines <- tribble(
-  ~city, ~tier, ~decline,
-  "Sydney", "Upper quartile", -0.107,
-  "Sydney", "Lower quartile", -0.054,
-  "Melbourne", "Upper quartile", -0.105,
-  "Melbourne", "Lower quartile", -0.039
+assert_true(
+  nrow(cotality_figures) == 12 && !anyDuplicated(cotality_figures[c("source_id", "metric_id")]),
+  "The Cotality published-figure audit must contain twelve unique metrics."
+)
+assert_true(
+  all(cotality_figures$unit == "share") &&
+    all(is.finite(cotality_figures$value)) &&
+    all(cotality_figures$retrieved_date == as.Date("2026-10-20")),
+  "The Cotality published-figure audit has invalid units, values or retrieval dates."
+)
+
+cotality_value <- function(metric_id) {
+  value <- cotality_figures |> filter(.data$metric_id == !!metric_id) |> pull(value)
+  assert_true(length(value) == 1, paste("Missing Cotality metric:", metric_id))
+  value
+}
+
+# Lower-quartile declines are derived from each published upper-quartile decline
+# plus the published upper-minus-lower gap, then asserted against the chart values.
+tier_declines <- tibble(
+  city = rep(c("Sydney", "Melbourne"), each = 2),
+  tier = rep(c("Upper quartile", "Lower quartile"), 2),
+  decline = c(
+    cotality_value("sydney_upper_quartile_decline"),
+    cotality_value("sydney_upper_quartile_decline") + cotality_value("sydney_upper_minus_lower_gap"),
+    cotality_value("melbourne_upper_quartile_decline"),
+    cotality_value("melbourne_upper_quartile_decline") + cotality_value("melbourne_upper_minus_lower_gap")
+  )
+)
+assert_true(
+  identical(round(tier_declines$decline, 3), c(-0.107, -0.054, -0.105, -0.039)),
+  "Derived Cotality lower-quartile values no longer match the published figures."
+)
+
+breadth_evidence <- tibble(
+  panel = c(
+    "Markets recording a fall",
+    "Markets recording a fall",
+    "September-quarter value change",
+    "September-quarter value change",
+    "September-quarter value change",
+    "Annual dwelling-value change",
+    "Annual dwelling-value change"
+  ),
+  market = c(
+    "Capital-city suburbs\nthree months to September",
+    "Regional SA3 markets\nSeptember",
+    "Australia",
+    "Combined capitals",
+    "Regional markets",
+    "Regional markets",
+    "Combined capitals"
+  ),
+  value = c(
+    cotality_value("capital_suburbs_falling_three_months"),
+    cotality_value("regional_sa3_falling_month"),
+    cotality_value("national_quarterly_change"),
+    cotality_value("combined_capitals_quarterly_change"),
+    cotality_value("regional_quarterly_change"),
+    cotality_value("regional_annual_change"),
+    cotality_value("combined_capitals_annual_change")
+  )
+) |>
+  mutate(
+    panel = factor(
+      panel,
+      levels = c("Markets recording a fall", "September-quarter value change", "Annual dwelling-value change")
+    )
+  )
+assert_true(
+  identical(round(breadth_evidence$value, 3), c(0.970, 0.710, -0.037, -0.043, -0.019, 0.056, -0.018)),
+  "The Cotality breadth chart no longer matches the audited published figures."
 )
 
 ```
 
-Within New South Wales, June-quarter weakness was sharpest in Sydney established houses. Their median transfer price fell 4.0%, compared with 1.8% for Sydney attached dwellings, 2.4% for rest-of-NSW houses and 0.6% for rest-of-NSW attached dwellings. Cotality's quality-adjusted indexes through August point in the same direction across price tiers: upper-quartile Sydney houses were 10.7% below peak, versus 5.4% for the lower quartile.
+::: {.callout-note title="Executive summary"}
 
-That is concentration, not containment. Every broad NSW segment in the ABS data fell, and the public data used here cannot separate inner from outer Sydney. Victoria is a useful comparator, but its pattern was messier. The rest of the market was generally less weak—not broadly stable or rising.
+- The ABS mean dwelling price fell in **`r falling_jurisdictions` out of 8 jurisdictions** in the June quarter: New South Wales, Victoria and the ACT. NSW recorded the largest fall at `r percent(abs(filter(state_price_change, state == "New South Wales")$change), accuracy = 0.1)`.
+- Within NSW, Sydney established houses had the largest fall among the ABS's four broad capital/rest-of-state and house/attached segments. Every segment fell, but the falls were smaller outside that segment.
+- Separate Cotality evidence shows the downturn was deepest in upper-quartile Sydney and Melbourne houses and, by September, had broadened across most capital-city suburbs and many regional markets.
 
-Nor did the concentration last. By September, the downturn had spread across almost every capital-city suburb and into many regional markets. This article therefore separates the question of **where the fall first appeared deepest** from the question of **how broad the later downturn became**.
-
-::: {.callout-note}
-## Three measures, three different questions
-
-- **ABS stock values** estimate the value of every residential dwelling. They locate which jurisdictions drove the national fall.
-- **ABS transfer medians** describe the middle property sold in a quarter. They split established houses from attached dwellings and capital cities from the rest of each state, but can move when the mix of sales changes.
-- **Cotality's hedonic index** adjusts for property characteristics and can compare value tiers. The tier results cited here are published commercial findings; the underlying tier series is not publicly downloadable, so I have not presented them as my own independently reproduced estimates.
 :::
 
-## Sydney established houses fell most
+**Data through:** ABS whole-stock estimates and transaction medians to the June quarter 2026; Cotality price-tier evidence to August 2026; Cotality market-breadth evidence to September 2026.
 
-The ABS transfer medians provide a first cut by broad geography and dwelling type. Sydney's established-house median fell `r percent(abs(filter(focus_transfers, geography == "Sydney", dwelling_type == "Established house")$change), accuracy = 0.1)` in the June quarter, compared with `r percent(abs(filter(focus_transfers, geography == "Sydney", dwelling_type == "Attached dwelling")$change), accuracy = 0.1)` for attached dwellings. Outside Sydney, both declines were smaller.
+## The June-quarter fall was concentrated in NSW, Victoria and the ACT
 
-Victoria is the useful counterexample. Melbourne houses fell, but Melbourne attached dwellings were close to flat; outside Melbourne, attached dwellings fell more than houses. So the broad NSW pattern—more expensive capital-city houses weakening most—was not a mechanical rule everywhere.
+The national mean dwelling price fell `r percent(abs(filter(state_price_change, state == "Australia")$change), accuracy = 0.1)` between March and June 2026. But that national result was not a uniform fall across the country. NSW fell `r percent(abs(filter(state_price_change, state == "New South Wales")$change), accuracy = 0.1)`, Victoria fell `r percent(abs(filter(state_price_change, state == "Victoria")$change), accuracy = 0.1)` and the ACT fell `r percent(abs(filter(state_price_change, state == "Australian Capital Territory")$change), accuracy = 0.1)`. Mean prices rose in the other five states and territories.
+
+```{r}
+#| label: fig-state-price-change
+#| fig-cap: "Quarterly change in the ABS mean price of the residential dwelling stock, March to June 2026. These whole-stock estimates are not transaction medians or quality-adjusted price indexes; June estimates are preliminary."
+#| fig-alt: "Horizontal bars show mean dwelling prices falling 2.4 percent in New South Wales, 2.1 percent in Victoria, 1.3 percent in the ACT and 0.7 percent nationally, while the other five jurisdictions rose."
+#| fig-width: 9
+#| fig-height: 5.6
+
+state_price_change |>
+  mutate(
+    state = fct_reorder(state, change),
+    emphasis = case_when(
+      state %in% c("New South Wales", "Victoria") ~ "Focus states",
+      state == "Australia" ~ "Australia",
+      TRUE ~ "Other jurisdictions"
+    ),
+    label_hjust = if_else(change < 0, 1.15, -0.15)
+  ) |>
+  ggplot(aes(change, state, fill = emphasis)) +
+  geom_vline(xintercept = 0, colour = "grey55", linewidth = 0.6) +
+  geom_col(width = 0.68) +
+  geom_text(
+    aes(label = percent(change, accuracy = 0.1), hjust = label_hjust),
+    colour = "grey20",
+    fontface = "bold",
+    size = 3.3
+  ) +
+  scale_fill_manual(
+    values = c("Focus states" = "#B8472D", "Australia" = "#40464B", "Other jurisdictions" = "#6E8794"),
+    guide = "none"
+  ) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), limits = c(-0.04, 0.055), breaks = seq(-0.04, 0.04, 0.02)) +
+  labs(
+    title = "Mean dwelling prices fell most in NSW and Victoria",
+    subtitle = "Change in estimated mean dwelling price",
+    x = NULL,
+    y = NULL
+  )
+```
+
+This establishes why the next cut focuses on Sydney and Melbourne. NSW and Victoria were the two large states recording declines, while the rest of the country was not yet moving in one direction.
+
+## Sydney houses led the fall; Victoria's pattern was less tidy
+
+The ABS transaction medians split the two focus states by capital city versus rest of state, and by established houses versus attached dwellings. Sydney's established-house median fell `r percent(abs(filter(focus_transfers, geography == "Sydney", dwelling_type == "Established house")$change), accuracy = 0.1)` in the June quarter, compared with `r percent(abs(filter(focus_transfers, geography == "Sydney", dwelling_type == "Attached dwelling")$change), accuracy = 0.1)` for attached dwellings. Outside Sydney, both declines were smaller.
+
+Victoria is the counterexample. Melbourne houses fell, but Melbourne attached dwellings were close to flat; outside Melbourne, attached dwellings fell more than houses. The NSW pattern—capital-city houses weakening most—was therefore not a mechanical rule everywhere.
 
 ```{r}
 #| label: fig-focus-segments
@@ -347,18 +478,18 @@ focus_transfers |>
   scale_colour_manual(values = c(`FALSE` = "#6E8794", `TRUE` = "#B8472D")) +
   scale_x_continuous(labels = percent_format(accuracy = 1), limits = c(-0.065, 0.005), breaks = seq(-0.06, 0, 0.01)) +
   labs(
-    title = "Sydney established houses fell most",
+    title = "Sydney houses had the largest fall among four broad NSW segments",
     subtitle = "Victoria shown as a comparator; quarterly change in median transfer price",
     x = NULL,
     y = NULL
   )
 ```
 
-These are not apartment-versus-house price indexes. “Attached dwelling” is broader than apartment, “rest of state” is not the same as regional, and an unstratified median can fall because cheaper homes made up more of that quarter's sales. The latest transfer counts are preliminary and revision-prone, so they should not be read as a collapse in market activity.
+“Attached dwelling” is broader than apartment: it generally includes apartments, units, terraces, semis and townhouses. “Rest of state” is also not the same as regional or outer-metropolitan. The categories are useful, but they do not yet answer a precise apartment-versus-house or inner-versus-outer question.
 
 ## Upper-quartile houses fell further in Sydney and Melbourne
 
-The strongest evidence for the value-tier story in Australia's two largest cities comes from Cotality's quality-adjusted indexes, not the ABS transaction medians. In data through August, upper-quartile houses were 10.7% below their peak in Sydney and 10.5% below in Melbourne. The upper-to-lower decline gaps were 5.3 and 6.6 percentage points respectively.
+The evidence for the value-tier story in Australia's two largest cities comes from Cotality's quality-adjusted indexes, not the ABS transaction medians. In data through August, upper-quartile houses were 10.7% below their peak in Sydney and 10.5% below in Melbourne. The upper-to-lower decline gaps were 5.3 and 6.6 percentage points respectively.
 
 ```{r}
 #| label: fig-price-tiers
@@ -389,29 +520,84 @@ ggplot(tier_wide, aes(y = city)) +
 
 This supports the narrower hypothesis that higher-value houses led the downturn in Sydney and Melbourne. It is not a result about the full Australian price distribution, does not mean every expensive property fell, and does not identify the cause. It is also a cited commercial estimate: [Cotality publishes the headline tier findings](https://www.cotality.com/au/insights/articles/high-end-homes-lead-market-downturn-as-affordable-properties-prove-resilient), but not the raw tier series needed to reproduce the index independently.
 
-## Concentrated does not mean contained
+## The downturn later broadened beyond the expensive end
 
-Every broad NSW segment in the ABS comparison fell. Across NSW and Victoria, three of the eight segments were within 1% of their March median, but none increased. That makes “the rest was less weak” a better description than “the rest was rising.” It also keeps the limits of unstratified medians in view: changes in the mix of properties sold can move the median even when like-for-like values move differently.
+The June data describe where the national fall was concentrated, not the latest breadth of the downturn. In September, [Cotality reported](https://www.cotality.com/au/insights/articles/australian-housing-values-down-for-sixth-straight-month-in-september) a national index fall of `r percent(abs(cotality_value("national_monthly_change")), accuracy = 0.1)`. Over the preceding three months, `r percent(cotality_value("capital_suburbs_falling_three_months"), accuracy = 1)` of capital-city suburbs had fallen, and `r percent(cotality_value("regional_sa3_falling_month"), accuracy = 1)` of regional SA3 markets fell in September alone.
+
+```{r}
+#| label: fig-market-breadth
+#| fig-cap: "Published Cotality evidence through September 2026. The breadth measures use different windows: three months for capital-city suburbs and one month for regional SA3 markets. Quarterly and annual value changes use Cotality's quality-adjusted Home Value Index."
+#| fig-alt: "Three-panel bar chart. Ninety-seven percent of capital-city suburbs fell over three months and 71 percent of regional SA3 markets fell in September. Over the September quarter, values fell 3.7 percent nationally, 4.3 percent across the combined capitals and 1.9 percent regionally. Regional values were 5.6 percent higher over the year while combined-capital values were 1.8 percent lower."
+#| fig-width: 8.5
+#| fig-height: 8.2
+
+breadth_evidence |>
+  mutate(
+    market = factor(
+      market,
+      levels = c(
+        "Combined capitals",
+        "Regional markets",
+        "Australia",
+        "Regional SA3 markets\nSeptember",
+        "Capital-city suburbs\nthree months to September"
+      )
+    ),
+    label_hjust = if_else(value < 0, 1.15, -0.15)
+  ) |>
+  ggplot(aes(value, market)) +
+  geom_vline(xintercept = 0, colour = "grey55", linewidth = 0.6) +
+  geom_col(fill = "#6E8794", width = 0.68) +
+  geom_text(
+    aes(label = percent(value, accuracy = 0.1), hjust = label_hjust),
+    fontface = "bold",
+    colour = "grey20",
+    size = 3.4
+  ) +
+  facet_wrap(~panel, scales = "free", ncol = 1) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = c(0.10, 0.18))) +
+  labs(
+    title = "The fall broadened; regions remained stronger over the year",
+    x = NULL,
+    y = NULL
+  )
+```
+
+Regions were still more resilient over the year—regional values were `r percent(cotality_value("regional_annual_change"), accuracy = 0.1)` higher while the combined capitals were `r percent(abs(cotality_value("combined_capitals_annual_change")), accuracy = 0.1)` lower—but they were no longer uniformly stable or rising. The fall was both **concentrated at the expensive end** and **broadening across locations**.
+
+The newer October chart pack reinforces the difference in intensity. Over the September quarter, national values fell `r percent(abs(cotality_value("national_quarterly_change")), accuracy = 0.1)`, with a `r percent(abs(cotality_value("combined_capitals_quarterly_change")), accuracy = 0.1)` fall across the combined capitals versus `r percent(abs(cotality_value("regional_quarterly_change")), accuracy = 0.1)` across regional markets.
 
 ## Inner versus outer Sydney remains unanswered
 
 The national ABS workbook stops at capital city versus rest of state; it cannot tell us whether the weakness sits in Sydney's inner, middle or outer rings. NSW's [property-sales information files](https://www.valuergeneral.nsw.gov.au/design/bulk_psi_content/bulk_psi) could eventually support that analysis, but complete 2026 registrations are not yet available in one annual archive and recent weekly files arrive with lags and revisions.
 
-A defensible inner/outer comparison would need complete transactions mapped to consistently defined rings and, ideally, an adjustment for the changing mix of homes sold. Without that, “rest of NSW” should not be relabelled “outer Sydney” or “regional,” and the geographic split should remain an explicit unanswered question.
+A defensible inner/outer comparison needs complete transactions mapped to consistent rings and, ideally, an adjustment for the changing mix of homes sold. Until then, “rest of NSW” should not be relabelled “outer Sydney” or “regional.”
 
-## The initially concentrated fall later broadened
+## Three-line takeaway
 
-The June data describe where the national fall was concentrated, not the latest breadth of the downturn. In September, [Cotality's national index fell 1.1%](https://www.cotality.com/au/insights/articles/australian-housing-values-down-for-sixth-straight-month-in-september). Over the preceding three months, 97% of capital-city suburbs had fallen, and 71% of regional SA3 markets fell in September alone.
+- The June-quarter national fall was concentrated in NSW, Victoria and the ACT—not spread evenly across every state.
+- Within NSW, Sydney established houses fell most among the four broad ABS segments; Cotality separately shows deeper peak-to-August falls among upper-quartile houses.
+- By September, the downturn had broadened substantially, while the public data still could not resolve inner versus outer Sydney.
 
-Regions were still more resilient—regional values were 5.6% higher than a year earlier while the combined capitals were 1.8% lower—but they were no longer uniformly stable or rising. The clean conclusion is:
+## Appendix {#appendix}
 
-> Sydney's weakness was concentrated, not contained. Established-house transfer medians fell more than attached dwellings, and upper-quartile houses had fallen further from peak than lower-quartile houses. But every broad NSW segment fell, the public data cannot resolve inner versus outer Sydney, and by September the weakness had spread much more widely.
+::: {.callout-note collapse="true" title="Measures, caveats and reproducible method"}
 
-## Data and method
+The analysis deliberately uses three different measures for three different questions:
 
-The primary calculations use two workbooks from the ABS [Total Value of Dwellings, June Quarter 2026](https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/total-value-dwellings/jun-quarter-2026), released 8 September 2026. Table 1 contains whole-of-stock estimates; Table 2 contains unstratified transfer medians and counts. Both latest-quarter sets are preliminary and can be revised. The release-specific [ABS methodology](https://www.abs.gov.au/methodologies/total-value-dwellings-methodology/jun-quarter-2026) defines dwelling types, geographic coverage, estimation and revision rules.
+- **ABS stock estimates** measure the mean value of the full residential dwelling stock and establish which jurisdictions moved in the June quarter.
+- **ABS transfer medians** describe the middle property sold in a quarter. They split established houses from attached dwellings and capital cities from the rest of each state, but an unstratified median can move when the mix of sales changes.
+- **Cotality's hedonic index** adjusts for property characteristics and supplies the price-tier and later market-breadth evidence. The tier results are published commercial findings; the underlying tier series is not publicly downloadable, so they are not presented as independently reproduced estimates.
 
-The build verifies each workbook's file size and SHA-256 checksum, expected units and series count, June 2026 coverage, unique keys, national headline values, state-to-national reconciliation and the eight focus-state transfer medians. To deliberately refresh the registered downloads, render with `BLOG_REFRESH_DATA=true`; a changed upstream file fails checksum validation before replacing the cached copy.
+The measures use different methods and time horizons. They corroborate the direction and shape of the story, but their magnitudes should not be compared as if they were the same index.
+
+The primary ABS calculations use Tables 1 and 2 from [Total Value of Dwellings, June Quarter 2026](https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/total-value-dwellings/jun-quarter-2026), released 8 September 2026. Table 1 contains whole-stock estimates; Table 2 contains unstratified transfer medians and counts. The latest-quarter estimates are preliminary and can be revised. The release-specific [ABS methodology](https://www.abs.gov.au/methodologies/total-value-dwellings-methodology/jun-quarter-2026) defines dwelling types, geographic coverage, estimation and revision rules.
+
+The build verifies both ABS workbooks' file sizes and SHA-256 checksums, expected units and series counts, June 2026 coverage, unique keys, national headline values, state-to-national reconciliation and the eight focus-state transfer medians. To deliberately refresh the registered downloads, render with `BLOG_REFRESH_DATA=true`; a changed upstream file fails checksum validation before replacing the cached copy. The three Cotality articles are recorded with publication, coverage and retrieval dates in a version-controlled figure audit. The code derives the lower-quartile values from the published upper-quartile declines and gaps, then checks all four tier values and all seven later-market values before plotting them.
+
+:::
+
+::: {.callout-note collapse="true" title="Focus-state transfer values"}
 
 ```{r}
 #| label: tbl-focus-values
@@ -429,18 +615,35 @@ focus_transfers |>
   kable(align = c("l", "l", "l", "r", "r"))
 ```
 
-### Source register
+:::
+
+::: {.callout-note collapse="true" title="Source register"}
 
 ```{r}
 #| label: tbl-sources
 
-source_registry |>
-  transmute(
-    Publisher = publisher,
-    Dataset = paste0("[", dataset, "](", landing_url, ")"),
-    `Source/revision date` = release_date,
-    `Coverage end` = coverage_end,
-    `SHA-256 prefix` = substr(sha256, 1, 12)
-  ) |>
-  kable(escape = FALSE, align = c("l", "l", "l", "l", "l"))
+bind_rows(
+  source_registry |>
+    transmute(
+      Publisher = publisher,
+      Source = paste0("[", dataset, "](", landing_url, ")"),
+      `Publication/revision date` = release_date,
+      `Coverage end` = coverage_end,
+      Retrieved = NA_character_,
+      Audit = paste0("Downloaded file; SHA-256 ", substr(sha256, 1, 12), "…")
+    ),
+  cotality_figures |>
+    distinct(source_id, publisher, title, publication_date, coverage_end, retrieved_date, source_url) |>
+    transmute(
+      Publisher = publisher,
+      Source = paste0("[", title, "](", source_url, ")"),
+      `Publication/revision date` = as.character(publication_date),
+      `Coverage end` = as.character(coverage_end),
+      Retrieved = as.character(retrieved_date),
+      Audit = "Published figures transcribed to version-controlled CSV"
+    )
+) |>
+  kable(escape = FALSE, align = c("l", "l", "l", "l", "l", "l"))
 ```
+
+:::

@@ -1,8 +1,8 @@
 ---
-title: "The Clearest Reported NDIS Outcome Gains Are in Early Childhood"
-description: "After one reassessment, most published NDIS outcome indicators move only a little. The larger gains are concentrated in communication and friendships among young children."
+title: "A $51.5 Billion NDIS Should Show What Outcomes It Delivers"
+description: "Participants report some gains. But public reporting still cannot show which supports produced them—or what outcomes the Scheme's $51.5 billion annual spend is delivering."
 date: "2026-06-10"
-date-modified: "2026-10-13"
+date-modified: "2026-10-20"
 categories: [ndis, outcomes, disability, australia]
 author: "Aydin"
 ---
@@ -256,14 +256,142 @@ cohort_summary <- reassessment_one |>
 early_childhood_summary <- cohort_summary |> filter(cohort == "Early childhood")
 adult_summary <- cohort_summary |> filter(cohort == "Adults")
 largest_gain <- reassessment_one |> slice_max(adjusted_change, n = 1, with_ties = FALSE)
+largest_two_gains <- reassessment_one |>
+  slice_max(adjusted_change, n = 2, with_ties = FALSE) |>
+  arrange(desc(adjusted_change))
 largest_fall <- reassessment_one |> slice_min(adjusted_change, n = 1, with_ties = FALSE)
+
+evidence_sources <- read_csv("evidence-sources.csv", show_col_types = FALSE)
+assert_true(nrow(evidence_sources) == 7, "The broader NDIS evidence register is incomplete.")
+assert_true(!anyDuplicated(evidence_sources$source_id), "The broader NDIS evidence register has duplicate IDs.")
 ```
 
-The public NDIS outcomes data tells a more restrained story than either “outcomes improved” or “nothing changed”. After one plan reassessment, most published indicators move by only a few percentage points. The clearest gains are concentrated among children before school age—especially communication and friendships—while the typical adult indicator changes by just `r number(100 * adult_summary$median_change, accuracy = 1)` percentage point.
+::: {.callout-note title="Executive summary"}
 
-That distinction matters. These files contain aggregated survey percentages, not participant-level records, comparison groups or sample sizes. They can show where reported outcomes moved; they cannot establish that the NDIS caused the movement.
+- The NDIS made **$51.5 billion in nominal cash-basis payments** in the 12 months to June 2026. Spending is traceable by category; outcomes are not linked to the supports and dollars behind them.
+- This is not a claim that there are no benefits. Participants report improvement in some areas, and independent studies find credible gains in selected domains.
+- The accountability gap is that public evidence still cannot reliably show **which funded supports work, for whom, and whether the outcomes are commensurate with the spend**.
 
-## Start with the right baseline
+:::
+
+The NDIS can tell the public—in considerable detail—how many participants it supports and how much it pays. In the 12 months to June 2026, nominal cash-basis payments reached $51.5 billion, as set out in the [companion analysis of NDIS payments and utilisation](../ndis-budget-utilisation-prediction/). For a program of that scale, the reasonable question is: **where is the equally clear public evidence of the outcomes that spending delivers?**
+
+The answer is not “there are no measured outcomes”. The NDIA's [2024 Participant Outcomes Summary Report](https://dataresearch.ndis.gov.au/media/4191/download) examined 296 indicators and found 30% with statistically significant and material change, separating favourable from adverse movements. Some participants report meaningful improvement and several independent analyses find credible scheme-level benefits.
+
+The problem is traceability. Public outcome reporting rarely lets us connect a particular therapy, support worker, assistive technology purchase or other funded support—and the money spent on it—to a better outcome. The freshest downloadable extract also publishes rounded aggregates without the denominators and uncertainty needed to judge the precision of individual movements.
+
+The cohort consists of matched respondents whose latest Short Form assessment was their first reassessment, generally around one year after first-plan approval. The data can show where reported outcomes moved; it cannot establish that the NDIS caused the movement.
+
+## We can see some change, but not what the spending produced
+
+The argument becomes clearer when it is split into three questions:
+
+1. **Did reported outcomes change after people entered the Scheme?** Yes, for some measures and cohorts. This is the strongest and most current public evidence.
+2. **Did the NDIS cause those changes?** There is some credible scheme-level evidence, but it is mixed across outcomes and methods.
+3. **Which supports caused better outcomes for which participants—and at what cost?** The public evidence is not yet reliable enough to answer this.
+
+```{r}
+#| label: evidence-ladder
+#| fig-cap: "Public evidence is strongest for reported change, mixed for scheme-level attribution and weakest for intervention-level effectiveness."
+#| fig-alt: "Three connected boxes show that evidence becomes less conclusive as the question narrows from whether reported outcomes changed, to whether the NDIS caused the change, to whether a particular support caused the change."
+#| fig-width: 9
+#| fig-height: 3.1
+
+evidence_ladder <- tibble(
+  x = 1:3,
+  question = c(
+    "Reported outcomes\nchanged",
+    "The NDIS caused\nthe change",
+    "A particular support\ncaused the change"
+  ),
+  assessment = c(
+    "Current descriptive evidence",
+    "Some credible but mixed evidence",
+    "Not established in public data"
+  ),
+  fill = c("#246b8e", "#b77b2b", "#8b4a45")
+)
+
+ggplot(evidence_ladder, aes(x, 1)) +
+  annotate("segment", x = 1.36, xend = 1.64, y = 1, yend = 1, colour = "grey60", linewidth = 1) +
+  annotate("segment", x = 2.36, xend = 2.64, y = 1, yend = 1, colour = "grey60", linewidth = 1) +
+  geom_tile(aes(fill = fill), width = 0.72, height = 0.8, show.legend = FALSE) +
+  geom_text(aes(label = question), colour = "white", fontface = "bold", lineheight = 0.95, size = 4) +
+  geom_text(aes(y = 0.48, label = assessment), colour = "grey25", size = 3.3) +
+  scale_fill_identity() +
+  coord_cartesian(xlim = c(0.55, 3.45), ylim = c(0.25, 1.45), clip = "off") +
+  labs(title = "The evidence thins as the question gets more specific") +
+  theme_void(base_size = 12) +
+  theme(plot.title = element_text(face = "bold"), plot.margin = margin(10, 20, 15, 20))
+```
+
+The broader evidence base supports that middle position. The [independent trial evaluation](https://acdhs.edu.au/wp-content/uploads/2018/05/NDIS-Evaluation-Final-Report.pdf) found that the Scheme delivered intended outcomes overall, including improved choice and control and generally modest participant-wellbeing gains, but that benefits were uneven. It found no statistically detectable effect on overall child wellbeing—a broader measure that does not negate the reported communication and friendship movements below, but does stop us treating them as causal evidence of a child-level benefit. Taylor Fry's [modelling for the NDIS Review](https://www.ndisreview.gov.au/sites/default/files/2023-11/Taylor_Fry_NDIS%20Review_Cost_Benefit_Analysis.pdf) found positive results for some participant outcomes—including life satisfaction, choice and control, housing, transport and hospital use—but not self-rated health, safety or school outcomes. Its separate HILDA analysis found improved participant financial security and stronger carer results, but no significant participant improvement in life satisfaction, employment, income, school outcomes or psychological distress.
+
+A [2025 quasi-experimental staggered-rollout study](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0321377) provides a useful counterweight: its difference-in-differences design found no statistically significant short-run area-level effects on formal-service use, caring hours, carer employment or social participation. The causal interpretation depends on the design's identifying assumptions; the study also had limited statistical power and measured local NDIS availability rather than confirmed individual receipt. It is a null result—not proof of no benefit.
+
+Taken together, the evidence says that benefits are plausible and sometimes visible, but not universal. It is much stronger at identifying broad change than at showing what the Scheme's spending produced.
+
+## The newest public data shows most first-reassessment changes are small
+
+For each outcome, I compare the baseline percentage with the first reassessment percentage for the group recorded as having one reassessment. Three indicators are coded adverse on their face—broad development concerns, inability to access wanted training, and having no friends beyond family or paid staff—and reversed so that positive means favourable movement. For development concerns, improved recognition may contribute to the movement, so its interpretation remains uncertain. The two “want more choice and control” indicators are excluded because their direction is ambiguous: wanting more choice can reveal unmet need, greater agency, or both.
+
+Across the 40 direction-classified participant indicators, most movements cluster close to zero. Early childhood has `r early_childhood_summary$improved` of `r early_childhood_summary$outcomes` indicators moving favourably, but it also contains the largest movement coded adverse on its face. Among adult indicators, `r adult_summary$improved` improve, `r adult_summary$unchanged` are unchanged and none worsen at the published one-percentage-point precision. The red medians summarise heterogeneous indicators; they are not participant medians and should not be used to rank cohorts.
+
+```{r}
+#| label: reassessment-distribution
+#| fig-cap: "Direction-adjusted change from baseline to first reassessment. Each point is one published outcome; positive values indicate favourable movement. Red bars are medians across indicators, not participant-level effects."
+#| fig-alt: "Dot plot of 40 direction-classified outcome changes by age cohort. Most cluster between zero and three percentage points. Early childhood contains the two largest favourable movements and the largest movement coded adverse on its face."
+#| fig-width: 8
+#| fig-height: 5.2
+
+plot_reassessment <- reassessment_one |>
+  mutate(cohort = factor(cohort, levels = expected_cohorts))
+
+ggplot(plot_reassessment, aes(cohort, adjusted_change)) +
+  geom_hline(yintercept = 0, colour = "grey55", linewidth = 0.6) +
+  geom_jitter(width = 0.10, height = 0, alpha = 0.55, size = 2.2, colour = "#246b8e", seed = 2026) +
+  stat_summary(fun = median, geom = "crossbar", width = 0.48, linewidth = 0.7, colour = "#9b3f2f") +
+  scale_y_continuous(labels = label_percent(accuracy = 1), breaks = seq(-0.05, 0.15, 0.05)) +
+  labs(title = "Most first-reassessment indicators moved only a few points", x = NULL, y = "Favourable change from baseline")
+```
+
+## The largest reported movements are concentrated
+
+The largest favourable change is `r largest_gain$outcome_short` for `r str_to_lower(largest_gain$cohort)`, up `r number(100 * largest_gain$adjusted_change, accuracy = 1)` percentage points. The largest movement coded adverse on its face is `r largest_fall$outcome_short` for `r str_to_lower(largest_fall$cohort)`, down `r number(100 * abs(largest_fall$adjusted_change), accuracy = 1)` percentage points after accounting for direction. The NDIA's 2024 report notes that greater use of specialist services can also reflect improved recognition of developmental concerns, so that indicator's interpretation is uncertain.
+
+The chart makes the concentration visible: the two double-digit favourable movements both relate to children before school age. Adult employment, education and volunteering do not show comparable movement in the first-reassessment cohort.
+
+```{r}
+#| label: largest-movements
+#| fig-cap: "A descriptive selection of the ten largest rounded absolute movements from baseline to first reassessment. Positive values indicate favourable movement. The source provides no sample counts or uncertainty estimates, so this is not a statistical ranking."
+#| fig-alt: "Diverging dot chart of the ten largest reported outcome movements. Communication and friendships among young children have the largest favourable movements. Broad development concerns have the largest face-value adverse movement, although better recognition may affect that measure."
+#| fig-width: 8
+#| fig-height: 6.2
+
+largest_movements <- reassessment_one |>
+  slice_max(abs(adjusted_change), n = 10, with_ties = FALSE) |>
+  mutate(
+    label = str_c(cohort, ": ", outcome_short),
+    label = fct_reorder(label, adjusted_change),
+    direction_label = if_else(adjusted_change >= 0, "Favourable", "Adverse")
+  )
+
+ggplot(largest_movements, aes(adjusted_change, label, colour = direction_label)) +
+  geom_vline(xintercept = 0, colour = "grey65") +
+  geom_segment(aes(x = 0, xend = adjusted_change, yend = label), linewidth = 0.9) +
+  geom_point(size = 3) +
+  geom_text(
+    aes(label = percent(adjusted_change, accuracy = 1)),
+    hjust = if_else(largest_movements$adjusted_change >= 0, -0.25, 1.25),
+    show.legend = FALSE,
+    size = 3.4
+  ) +
+  scale_x_continuous(labels = percent, limits = c(-0.09, 0.17)) +
+  scale_colour_manual(values = c(Favourable = "#16735c", Adverse = "#b0433c")) +
+  labs(title = "The largest reported movements were in early childhood", x = "Direction-adjusted change", y = NULL, colour = NULL)
+```
+
+## Entry outcomes provide context, not a current scorecard
 
 The baseline file is often tempting to describe as “current outcomes”. It is not. It records outcomes **when participants entered the Scheme**, for people represented in the June 2026 extract. It is a starting-point profile.
 
@@ -303,80 +431,97 @@ ggplot(adult_baseline, aes(baseline_rate, outcome_short)) +
   geom_point(size = 3, colour = "#246b8e") +
   geom_text(aes(label = percent(baseline_rate, accuracy = 1)), hjust = -0.35, size = 3.5) +
   scale_x_continuous(labels = percent, limits = c(0, 0.85), expand = expansion(mult = c(0, 0.03))) +
-  labs(x = "Share at Scheme entry", y = NULL)
+  labs(title = "Adult entry outcomes were lowest for work, study and volunteering", x = "Share at Scheme entry", y = NULL)
 ```
 
-## Most first-reassessment changes are small
+## The missing public account is spend to support to outcome
 
-For each outcome, I compare the baseline percentage with the first reassessment percentage for the group recorded as having one reassessment. Three clearly negative indicator types—broad development concerns, inability to access wanted training, and having no friends beyond family or paid staff—are reversed so that positive always means movement in a favourable direction. The two “want more choice and control” indicators are excluded because their direction is ambiguous: wanting more choice can reveal unmet need, greater agency, or both.
+These published movements are useful monitoring signals, not participant-level effect estimates. They are not uniformly large and they are not spread evenly across ages or domains. The largest reported favourable movements are in early-childhood communication and friendship or social connection. Broad development concerns move adversely on their face, although better recognition may be part of that movement. For adults, the indicators tied to work, learning and community participation remain low at entry and generally change little in the first-reassessment cohort.
 
-Across the 40 direction-classified participant indicators, most movements cluster close to zero. Early childhood has `r early_childhood_summary$improved` of `r early_childhood_summary$outcomes` indicators moving favourably, but it also contains the largest adverse movement. Adult outcomes are flatter: `r adult_summary$improved` improve, `r adult_summary$unchanged` are unchanged and none worsen at the published one-percentage-point precision.
+The [Independent NDIS Review](https://www.ndisreview.gov.au/sites/default/files/resource/download/working-together-ndis-review-final-report.pdf) reached the same deeper problem: the Outcomes Framework was not fit for purpose and it was difficult to link supports, investment and outputs to participant outcomes. Taylor Fry also warned that observational spending models can mistake participant need, goals or declining function for the effect of a support. More spending can correlate with a worse outcome because people with greater needs receive more support; an employment-support payment can correlate with employment because the person already had an employment goal.
 
-```{r}
-#| label: reassessment-distribution
-#| fig-cap: "Direction-adjusted change from baseline to first reassessment. Each point is one published outcome; positive values indicate favourable movement. Red bars are medians across indicators, not participant-level effects."
-#| fig-alt: "Dot plot of 40 direction-classified outcome changes by age cohort. Most cluster between zero and three percentage points. Early childhood contains the two largest gains and the largest decline."
-#| fig-width: 8
-#| fig-height: 5.2
+So the core conclusion is not that the NDIS fails. It is that Australia spends and reports tens of billions of dollars without yet having a reliable public learning system that tells participants, providers and governments what outcomes that spending produced.
 
-plot_reassessment <- reassessment_one |>
-  mutate(cohort = factor(cohort, levels = expected_cohorts))
+## What a real learning system would need
 
-ggplot(plot_reassessment, aes(cohort, adjusted_change)) +
-  geom_hline(yintercept = 0, colour = "grey55", linewidth = 0.6) +
-  geom_jitter(width = 0.10, height = 0, alpha = 0.55, size = 2.2, colour = "#246b8e", seed = 2026) +
-  stat_summary(fun = median, geom = "crossbar", width = 0.48, linewidth = 0.7, colour = "#9b3f2f") +
-  scale_y_continuous(labels = label_percent(accuracy = 1), breaks = seq(-0.05, 0.15, 0.05)) +
-  labs(x = NULL, y = "Favourable change from baseline")
-```
+- participant-level links between the support received, its intensity and timing, and later outcomes;
+- published sample sizes and uncertainty, with comparable outcomes defined before analysis;
+- credible comparison groups or phased evaluations where practical and ethical;
+- results split by disability, age, geography and starting need so average effects do not hide who benefits; and
+- participant-defined outcomes and cost-effectiveness, not spending or plan utilisation alone.
 
-## The larger movements are concentrated
+## Three-line takeaway
 
-The largest favourable change is `r largest_gain$outcome_short` for `r str_to_lower(largest_gain$cohort)`, up `r number(100 * largest_gain$adjusted_change, accuracy = 1)` percentage points. The largest adverse change is `r largest_fall$outcome_short` for `r str_to_lower(largest_fall$cohort)`, down `r number(100 * abs(largest_fall$adjusted_change), accuracy = 1)` percentage points after accounting for direction.
+- NDIS payments are traceable by category; public outcomes are not linked to the supports and dollars behind them.
+- This does not mean there are no benefits: participants report some gains and independent studies find credible improvements in selected domains.
+- The unresolved public-accountability question is which supports produced which outcomes, for whom, and whether those outcomes justify the spend.
 
-The chart makes the concentration visible: the two double-digit gains both relate to children before school age. Adult employment, education and volunteering do not show comparable movement after one reassessment.
+## Appendix {#appendix}
 
-```{r}
-#| label: largest-movements
-#| fig-cap: "The ten largest absolute movements from baseline to first reassessment. Positive values indicate favourable movement."
-#| fig-alt: "Diverging dot chart of the ten largest outcome movements. Communication and friendships among young children have the largest gains, while broad early-childhood development concerns have the largest adverse movement."
-#| fig-width: 8
-#| fig-height: 6.2
+::: {.callout-note collapse="true" title="Cohort definition, caveats and method"}
 
-largest_movements <- reassessment_one |>
-  slice_max(abs(adjusted_change), n = 10, with_ties = FALSE) |>
-  mutate(
-    label = str_c(cohort, ": ", outcome_short),
-    label = fct_reorder(label, adjusted_change),
-    direction_label = if_else(adjusted_change >= 0, "Favourable", "Adverse")
-  )
+The first-reassessment comparison describes matched respondents whose latest Short Form assessment was their first reassessment, generally around one year after first-plan approval. It is not a representative panel of all NDIS participants and has no untreated counterfactual.
 
-ggplot(largest_movements, aes(adjusted_change, label, colour = direction_label)) +
-  geom_vline(xintercept = 0, colour = "grey65") +
-  geom_segment(aes(x = 0, xend = adjusted_change, yend = label), linewidth = 0.9) +
-  geom_point(size = 3) +
-  geom_text(
-    aes(label = percent(adjusted_change, accuracy = 1)),
-    hjust = if_else(largest_movements$adjusted_change >= 0, -0.25, 1.25),
-    show.legend = FALSE,
-    size = 3.4
-  ) +
-  scale_x_continuous(labels = percent, limits = c(-0.09, 0.17)) +
-  scale_colour_manual(values = c(Favourable = "#16735c", Adverse = "#b0433c")) +
-  labs(x = "Direction-adjusted change", y = NULL, colour = NULL)
-```
-
-## What the data does—and does not—say
-
-These are published aggregate movements, not participant-level effect estimates. They are not uniformly large and they are not spread evenly across ages or domains. The largest favourable movements are in early-childhood communication and friendship or social connection, while broad development concerns move adversely. For adults, the indicators tied to work, learning and community participation remain low at entry and generally change little after one reassessment.
-
-Three limits should shape the interpretation:
+Four limits shape the interpretation:
 
 - The extract has no participant-level records or sample counts, so uncertainty cannot be calculated.
-- The first-reassessment comparison describes the respondents in that published group; it is not a randomised or matched counterfactual.
+- Common questions can be linked across age-based Short Form questionnaires, but a question introduced only in an older-age form receives a new baseline. The observations underpinning individual indicators can therefore differ.
 - Percentages are rounded to whole percentage points. A reported zero change may conceal a smaller movement.
+- The direction-adjusted charts combine heterogeneous indicators. Their red medians are medians across published indicators, not people, and the top-ten chart is a descriptive selection of rounded extremes rather than a statistical ranking.
 
-That leaves a useful, narrower conclusion: the public data supports a story of **concentrated early-childhood gains alongside broadly modest movement elsewhere**, not a single verdict on whether “NDIS outcomes” rose or fell.
+For direction coding, three indicators are coded adverse on their face—broad development concerns, inability to access wanted training, and having no friends beyond family or paid staff—and reversed so positive means favourable movement. Improved recognition may contribute to the development-concerns movement, so that indicator's interpretation remains uncertain. The two “want more choice and control” indicators are excluded because their direction is ambiguous.
+
+:::
+
+::: {.callout-note collapse="true" title="Broader evidence and spending-source audit"}
+
+The broader sources answer different questions and therefore should not be treated as interchangeable estimates. The Flinders comparison-group evaluation and Taylor Fry models are the most informative here for scheme-level attribution. The NDIS Review is an expert synthesis diagnosing the measurement gap rather than an estimate of the Scheme's effect. The latest NDIA extract is strongest for current descriptive monitoring, while the staggered-rollout study is a quasi-experimental causal-inference design estimating narrow area-level carer and service-use effects.
+
+```{r}
+#| label: broader-evidence-audit
+
+evidence_sources |>
+  transmute(
+    Source = str_c("[", title, "](", source_url, ")"),
+    Year = publication_year,
+    Design = study_design,
+    `What it supports` = what_it_supports,
+    `Key limit` = key_limit
+  ) |>
+  kable(align = c("l", "r", "l", "l", "l"), escape = FALSE)
+```
+
+The evidence is consistent with benefits for some participants. It is not sufficient to rank individual supports or providers by effectiveness.
+
+:::
+
+::: {.callout-note collapse="true" title="Direction-coding audit for all indicators"}
+
+```{r}
+#| label: direction-coding-audit
+
+reassessment_all |>
+  arrange(factor(cohort, levels = expected_cohorts), indicator_number) |>
+  transmute(
+    Cohort = cohort,
+    Indicator = indicator_number,
+    Outcome = outcome,
+    Baseline = percent(baseline_rate, accuracy = 1),
+    Reassessment = percent(reassessment_rate, accuracy = 1),
+    `Raw change` = paste0(number(100 * raw_change, accuracy = 1), " pp"),
+    `Assigned direction` = if_else(direction_class == "Ambiguous", "Ambiguous—excluded", direction_class),
+    `Direction-adjusted change` = if_else(
+      is.na(adjusted_change),
+      "Excluded",
+      paste0(number(100 * adjusted_change, accuracy = 1), " pp")
+    )
+  ) |>
+  kable(align = c("l", "r", "l", "r", "r", "r", "l", "r"))
+```
+
+The two “want more choice and control” indicators are the ambiguous rows excluded from the direction-adjusted charts.
+
+:::
 
 ::: {.callout-note collapse="true" title="Sources and reproducibility"}
 
